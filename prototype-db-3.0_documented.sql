@@ -35,8 +35,8 @@ CREATE TABLE `roles` (
 
   `role_id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID unik role. Contoh implementasi: 1=Super Admin, 2=Admin Akademik.',
   `nama_role` VARCHAR(50) NOT NULL COMMENT 'Nama tampilan role. Contoh implementasi: ''Guru Pengawas''.',
-  `role_slug` VARCHAR(50) NOT NULL COMMENT 'Slug role untuk pemanggilan sistem/API. Contoh implementasi: ''guru_pengawas''.',
-  `deskripsi` TEXT DEFAULT NULL COMMENT 'Penjelasan fungsi role. Contoh implementasi: ''Memantau jadwal, presensi, dan ujian''.',
+  `role_slug` VARCHAR(50) NOT NULL COMMENT 'Slug role untuk pemanggilan sistem/API. Contoh implementasi: ''guru_pengawas''.', -- generate dari nama_role
+  `deskripsi` TEXT DEFAULT NULL COMMENT 'Penjelasan fungsi role. Contoh implementasi: ''Memantau jadwal, presensi, dan ujian''.', -- opsional, diisi lebih mantap
   `is_system` TINYINT(1) NOT NULL DEFAULT 1 COMMENT 'Penanda role bawaan sistem. Contoh implementasi: 1=bawaan sistem, 0=role kustom.',
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Waktu record dibuat otomatis. Contoh implementasi: ''2026-04-09 08:15:00''.',
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Waktu record terakhir diperbarui otomatis. Contoh implementasi: ''2026-04-09 10:00:00''.',
@@ -50,7 +50,7 @@ CREATE TABLE `permissions` (
   `perm_id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID unik permission. Contoh implementasi: 15 untuk attendance.read.',
   `perm_slug` VARCHAR(100) NOT NULL COMMENT 'Kode izin unik. Contoh implementasi: ''attendance.validate''.',
   `module_name` VARCHAR(50) NOT NULL COMMENT 'Nama modul asal izin. Contoh implementasi: ''attendance''.',
-  `action_name` VARCHAR(50) NOT NULL COMMENT 'Aksi pada modul. Contoh implementasi: ''read'', ''write'', ''validate''.',
+  `action_name` VARCHAR(50) NOT NULL COMMENT 'Aksi pada modul. Contoh implementasi: ''read'', ''write'', ''validate''.', -- diganti enum aja karena aksi terbatas!
   `keterangan` TEXT DEFAULT NULL COMMENT 'Deskripsi izin. Contoh implementasi: ''Memvalidasi data presensi''.',
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Waktu record dibuat otomatis. Contoh implementasi: ''2026-04-09 08:15:00''.',
   PRIMARY KEY (`perm_id`),
@@ -61,10 +61,10 @@ CREATE TABLE `permissions` (
 CREATE TABLE `policies` (
 
   `policy_id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID unik policy. Contoh implementasi: 1=FullAccess.',
-  `policy_name` VARCHAR(100) NOT NULL COMMENT 'Nama tampilan policy. Contoh implementasi: ''AcademicAdminAccess''.',
-  `policy_slug` VARCHAR(100) NOT NULL COMMENT 'Slug policy untuk referensi sistem. Contoh implementasi: ''academic_admin_access''.',
-  `policy_type` ENUM('managed','inline') NOT NULL DEFAULT 'managed' COMMENT 'Jenis policy. Contoh implementasi: ''managed'' untuk policy bawaan, ''inline'' untuk policy khusus user/role.',
-  `deskripsi` TEXT DEFAULT NULL COMMENT 'Penjelasan cakupan policy. Contoh implementasi: ''Akses administrasi akademik dan presensi''.',
+  `policy_name` VARCHAR(100) NOT NULL COMMENT 'Nama tampilan policy. Contoh implementasi: ''AcademicAdminAccess''.', -- input biasa dengan spasi --> KapitalTanpaSpasi
+  `policy_slug` VARCHAR(100) NOT NULL COMMENT 'Slug policy untuk referensi sistem. Contoh implementasi: ''academic_admin_access''.', -- generate dari name berdasarkan huruf kapital
+  `policy_type` ENUM('managed','inline') NOT NULL DEFAULT 'managed' COMMENT 'Jenis policy. Contoh implementasi: ''managed'' untuk policy bawaan, ''inline'' untuk policy khusus user/role.', -- harus menampilkan detail makna apa itu managed / inline / lainnya jika ada!
+  `deskripsi` TEXT DEFAULT NULL COMMENT 'Penjelasan cakupan policy. Contoh implementasi: ''Akses administrasi akademik dan presensi''.', -- opsional, diisi lebih mantap
   `is_system` TINYINT(1) NOT NULL DEFAULT 1 COMMENT 'Penanda policy bawaan sistem. Contoh implementasi: 1 untuk policy standar.',
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Waktu record dibuat otomatis. Contoh implementasi: ''2026-04-09 08:15:00''.',
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Waktu record terakhir diperbarui otomatis. Contoh implementasi: ''2026-04-09 10:00:00''.',
@@ -80,7 +80,7 @@ CREATE TABLE `policy_permissions` (
   `perm_id` INT UNSIGNED NOT NULL COMMENT 'Referensi ke permission. Contoh implementasi: permission ''users.read''.',
   `effect` ENUM('allow','deny') NOT NULL DEFAULT 'allow' COMMENT 'Efek rule. Contoh implementasi: ''allow'' atau ''deny''.',
   `resource_scope` VARCHAR(150) NOT NULL DEFAULT '*' COMMENT 'Cakupan resource. Contoh implementasi: ''*'' untuk semua resource, ''self/*'' untuk data milik sendiri.',
-  `conditions_json` JSON DEFAULT NULL COMMENT 'Kondisi tambahan berbentuk JSON. Contoh implementasi: {''jam_mulai'':''07:00'',''hari'':[''senin'',''selasa'']}.',
+  `conditions_json` JSON DEFAULT NULL COMMENT 'Kondisi tambahan berbentuk JSON. Contoh implementasi: {''jam_mulai'':''07:00'',''hari'':[''senin'',''selasa'']}.', -- opsional
   `priority` SMALLINT UNSIGNED NOT NULL DEFAULT 100 COMMENT 'Prioritas evaluasi rule. Contoh implementasi: 1 lebih tinggi dari 100.',
   PRIMARY KEY (`policy_permission_id`),
   UNIQUE KEY `uk_policy_permissions_unique_rule` (`policy_id`, `perm_id`, `effect`, `resource_scope`, `priority`),
@@ -99,7 +99,7 @@ CREATE TABLE `role_permissions` (
   `role_id` INT UNSIGNED NOT NULL COMMENT 'Referensi role yang memperoleh permission.',
   `perm_id` INT UNSIGNED NOT NULL COMMENT 'Referensi permission pada role.',
   `is_allowed` TINYINT(1) NOT NULL DEFAULT 1 COMMENT 'Override izin role. Contoh implementasi: 1=diizinkan, 0=ditolak.',
-  `resource_scope` VARCHAR(150) NOT NULL DEFAULT '*' COMMENT 'Cakupan resource untuk role. Contoh implementasi: ''*'' atau ''room/LAB-TKJ-01''.',
+  `resource_scope` VARCHAR(150) NOT NULL DEFAULT '*' COMMENT 'Cakupan resource untuk role. Contoh implementasi: ''*'' atau ''room/LAB-TKJ-01''.', -- generate dengan data dari role dan perm
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Waktu record dibuat otomatis. Contoh implementasi: ''2026-04-09 08:15:00''.',
   PRIMARY KEY (`role_id`, `perm_id`, `resource_scope`),
   KEY `idx_role_permissions_perm` (`perm_id`),
@@ -115,8 +115,8 @@ CREATE TABLE `groups` (
 
   `group_id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID unik group user.',
   `group_name` VARCHAR(100) NOT NULL COMMENT 'Nama tampilan group. Contoh implementasi: ''Operator Lab Gedung A''.',
-  `group_slug` VARCHAR(100) NOT NULL COMMENT 'Slug group. Contoh implementasi: ''operator_lab_gedung_a''.',
-  `deskripsi` TEXT DEFAULT NULL COMMENT 'Penjelasan fungsi group.',
+  `group_slug` VARCHAR(100) NOT NULL COMMENT 'Slug group. Contoh implementasi: ''operator_lab_gedung_a''.', -- generate dari group_name
+  `deskripsi` TEXT DEFAULT NULL COMMENT 'Penjelasan fungsi group.', -- opsional
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Waktu record dibuat otomatis. Contoh implementasi: ''2026-04-09 08:15:00''.',
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Waktu record terakhir diperbarui otomatis. Contoh implementasi: ''2026-04-09 10:00:00''.',
   PRIMARY KEY (`group_id`),
@@ -131,9 +131,8 @@ CREATE TABLE `groups` (
 CREATE TABLE `jurusan` (
 
   `jurusan_id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID unik jurusan. Contoh implementasi: 1=TKJ.',
-  `kode_jurusan` VARCHAR(10) NOT NULL COMMENT 'Kode unik jurusan, ex: TKJ, RPL, MM',
+  `kode_jurusan` VARCHAR(10) NOT NULL COMMENT 'Kode unik jurusan, ex: TKJ, RPL, MM', -- generate dari nama_jurusan
   `nama_jurusan` VARCHAR(100) NOT NULL COMMENT 'Nama lengkap jurusan',
-  -- `singkatan` VARCHAR(10) NOT NULL COMMENT 'Singkatan jurusan',
   `ketua_jurusan` VARCHAR(100) DEFAULT NULL COMMENT 'Nama ketua jurusan',
   `status` ENUM('aktif','nonaktif') NOT NULL DEFAULT 'aktif' COMMENT 'Status data. Nilai mengikuti ENUM pada kolom ini. Contoh implementasi: ''aktif''.',
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Waktu record dibuat otomatis. Contoh implementasi: ''2026-04-09 08:15:00''.',
@@ -149,8 +148,8 @@ CREATE TABLE `rombel` (
   `rombel_id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID unik rombongan belajar.',
   `tingkatan` ENUM('X','XI','XII','XIII') NOT NULL COMMENT 'Tingkat kelas. Contoh implementasi: ''XII''.',
   `jurusan_id` INT UNSIGNED NOT NULL COMMENT 'Referensi jurusan terkait.',
-  `nomor_rombel` TINYINT UNSIGNED NOT NULL DEFAULT 1 COMMENT 'Contoh: 1 untuk TKJ-1',
-  `label_rombel` VARCHAR(30) DEFAULT NULL COMMENT 'Buffer label custom/sorting, ex: XII-TKJ-1',
+  `nomor_rombel` TINYINT UNSIGNED NOT NULL DEFAULT 1 COMMENT 'Contoh: 1 untuk TKJ-1', -- generate otomatis mulai dari 1 jika jurusan dan tingkatan sama
+  `label_rombel` VARCHAR(30) DEFAULT NULL COMMENT 'Buffer label custom/sorting, ex: XII-TKJ-1', -- generate dari tingkatan, jurusan, dan nomor rombel
   `status` ENUM('aktif','nonaktif') NOT NULL DEFAULT 'aktif' COMMENT 'Status data. Nilai mengikuti ENUM pada kolom ini. Contoh implementasi: ''aktif''.',
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Waktu record dibuat otomatis. Contoh implementasi: ''2026-04-09 08:15:00''.',
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Waktu record terakhir diperbarui otomatis. Contoh implementasi: ''2026-04-09 10:00:00''.',
@@ -216,7 +215,7 @@ CREATE TABLE `profil_siswa` (
   `alamat` TEXT DEFAULT NULL COMMENT 'Alamat lengkap. Contoh implementasi: ''Jl. Melati No. 10, Surabaya''.',
   `no_telp` VARCHAR(20) DEFAULT NULL COMMENT 'Nomor telepon. Contoh implementasi: ''081234567890''.',
   `email` VARCHAR(100) DEFAULT NULL COMMENT 'Alamat email. Contoh implementasi: ''guru@sekolah.sch.id''.',
-  `rombel` VARCHAR(20) DEFAULT NULL COMMENT 'Field legacy/custom label, dipertahankan untuk sorting spesifik',
+  `rombel` VARCHAR(20) DEFAULT NULL COMMENT 'Field legacy/custom label, dipertahankan untuk sorting spesifik', -- boleh referensi langsung ke rombel_id saat ini!
   `nama_ortu` VARCHAR(100) DEFAULT NULL COMMENT 'Nama orang tua/wali. Contoh implementasi: ''Slamet Riyadi''.',
   `no_telp_ortu` VARCHAR(20) DEFAULT NULL COMMENT 'Nomor telepon orang tua/wali. Contoh implementasi: ''081298765432''.',
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Waktu record dibuat otomatis. Contoh implementasi: ''2026-04-09 08:15:00''.',
@@ -232,7 +231,7 @@ CREATE TABLE `profil_siswa` (
 CREATE TABLE `siswa_mutasi` (
 
   `mutasi_id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID unik transaksi mutasi siswa.',
-  `siswa_id` INT UNSIGNED NOT NULL COMMENT 'Referensi siswa terkait.',
+  `siswa_id` INT UNSIGNED NOT NULL COMMENT 'Referensi siswa terkait.', -- harus dibawa ke halaman pembuatan aun siswa jika in
   `jenis_mutasi` ENUM('masuk','keluar') NOT NULL COMMENT 'Jenis mutasi siswa. Contoh implementasi: ''masuk'' atau ''keluar''.',
   `tanggal` DATE NOT NULL COMMENT 'Tanggal kejadian/transaksi. Contoh implementasi: ''2026-07-15''.',
   `sekolah_asal_tujuan` VARCHAR(100) DEFAULT NULL COMMENT 'Sekolah asal atau tujuan mutasi. Contoh implementasi: ''SMKN 2 Surabaya''.',
@@ -474,9 +473,9 @@ CREATE TABLE `user_sessions` (
 CREATE TABLE `ruangan` (
 
   `ruangan_id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID unik ruangan.',
-  `kode_ruangan` VARCHAR(20) NOT NULL COMMENT 'Contoh: LAB-TKJ-01',
-  `nama_ruangan` VARCHAR(50) NOT NULL COMMENT 'Nama ruangan. Contoh implementasi: ''Lab Jaringan 1''.',
-  `jenis_ruangan` ENUM('lab','kelas_teori','kantor','perpustakaan') NOT NULL COMMENT 'Kategori ruangan. Contoh implementasi: ''lab'' atau ''kelas_teori''.',
+  `kode_ruangan` VARCHAR(20) NOT NULL COMMENT 'Contoh: LAB-TKJ-01', -- generate dari nama_ruangan
+  `nama_ruangan` VARCHAR(50) NOT NULL COMMENT 'Nama ruangan. Contoh implementasi: ''Lab TKJ 1''.',
+  `jenis_ruangan` ENUM('lab','kelas_teori','kantor','perpustakaan') NOT NULL COMMENT 'Kategori ruangan. Contoh implementasi: ''lab'' atau ''kelas_teori''.', -- perlu mekanisme menambah enum ruangan tanpa menyentuh kode!
   `kapasitas` INT UNSIGNED NOT NULL DEFAULT 30 COMMENT 'Kapasitas maksimum ruangan. Contoh implementasi: 36 siswa.',
   `fasilitas` TEXT DEFAULT NULL COMMENT 'Deskripsi fasilitas ruangan. Contoh implementasi: ''36 PC, projector, AC''.',
   `lokasi` VARCHAR(100) DEFAULT NULL COMMENT 'Lokasi fisik ruangan. Contoh implementasi: ''Gedung A Lantai 2''.',
@@ -492,10 +491,10 @@ CREATE TABLE `perangkat_esp32` (
 
   `perangkat_id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID unik perangkat ESP32.',
   `mac_address` VARCHAR(17) NOT NULL COMMENT 'MAC address perangkat. Contoh implementasi: ''A4:CF:12:34:56:78''.',
-  `serial_number` VARCHAR(50) DEFAULT NULL COMMENT 'Nomor seri perangkat. Contoh implementasi: ''ESP32-QR-0001''.',
-  `device_type` ENUM('esp32','esp32_cam','esp32_qr_scanner') NOT NULL DEFAULT 'esp32_qr_scanner' COMMENT 'Tipe perangkat. Contoh implementasi: ''esp32_qr_scanner''.',
+  `serial_number` VARCHAR(50) DEFAULT NULL COMMENT 'Nomor seri perangkat. Contoh implementasi: ''ESP32-QR-0001''.', -- nomor pembuatan prototype
+  `device_type` ENUM('esp32','esp32_cam','esp32_qr_scanner') NOT NULL DEFAULT 'esp32_cam' COMMENT 'Tipe perangkat. Contoh implementasi: ''esp32_qr_scanner''.',
   `ip_address` VARCHAR(45) DEFAULT NULL COMMENT 'Alamat IP client/perangkat. Contoh implementasi: ''192.168.1.10''.',
-  `versi_firmware` VARCHAR(20) DEFAULT NULL COMMENT 'Versi firmware perangkat. Contoh implementasi: ''1.0.7''.',
+  `versi_firmware` VARCHAR(20) DEFAULT NULL COMMENT 'Versi firmware perangkat. Contoh implementasi: ''1.0.7''.', -- versi software / firmware
   `status_perangkat` ENUM('online','offline','maintenance') NOT NULL DEFAULT 'online' COMMENT 'Status operasional perangkat. Contoh implementasi: ''online''.',
   `last_ping` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Waktu heartbeat terakhir perangkat. Contoh implementasi: ''2026-04-09 08:10:00''.',
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Waktu record dibuat otomatis. Contoh implementasi: ''2026-04-09 08:15:00''.',
@@ -507,6 +506,7 @@ CREATE TABLE `perangkat_esp32` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabel buffer relasi ruangan <-> perangkat, ditambah histori penggunaan perangkat
+-- bisa digunakan untuk perangkat lain jika akan ditambahkan
 CREATE TABLE `ruangan_perangkat` (
 
   `ruangan_perangkat_id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID unik relasi ruangan-perangkat.',
@@ -563,7 +563,7 @@ CREATE TABLE `jadwal_lab` (
   `jam_mulai` TIME NOT NULL COMMENT 'Jam mulai jadwal. Contoh implementasi: ''07:00:00''.',
   `jam_selesai` TIME NOT NULL COMMENT 'Jam selesai jadwal. Contoh implementasi: ''09:30:00''.',
   `toleransi_terlambat_menit` SMALLINT UNSIGNED NOT NULL DEFAULT 15 COMMENT 'Batas keterlambatan dalam menit. Contoh implementasi: 15.',
-  `qr_checkout_wajib` TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Penanda apakah scan pulang wajib. Contoh implementasi: 1 untuk praktikum yang wajib checkout.',
+  `qr_checkout_wajib` TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Penanda apakah scan pulang wajib. Contoh implementasi: 1 untuk praktikum yang wajib checkout.', -- maksudnya jika bernilai 1 maka wajib scan saat keluar 
   `status` ENUM('aktif','nonaktif') NOT NULL DEFAULT 'aktif' COMMENT 'Status data. Nilai mengikuti ENUM pada kolom ini. Contoh implementasi: ''aktif''.',
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Waktu record dibuat otomatis. Contoh implementasi: ''2026-04-09 08:15:00''.',
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Waktu record terakhir diperbarui otomatis. Contoh implementasi: ''2026-04-09 10:00:00''.',
@@ -665,17 +665,17 @@ CREATE TABLE `presensi` (
   `presensi_id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID unik data presensi harian.',
   `siswa_id` INT UNSIGNED NOT NULL COMMENT 'Referensi siswa terkait.',
   `ruangan_id` INT UNSIGNED NOT NULL COMMENT 'Referensi ruangan terkait.',
-  `plotting_id` INT UNSIGNED DEFAULT NULL COMMENT 'Referensi plotting rombel terkait.',
+  `plotting_id` INT UNSIGNED DEFAULT NULL COMMENT 'Referensi plotting rombel terkait.', -- bisa dijadikan NOT NULL!?
   `jadwal_id` INT UNSIGNED DEFAULT NULL COMMENT 'Referensi jadwal lab terkait.',
   `tanggal` DATE NOT NULL COMMENT 'Tanggal kejadian/transaksi. Contoh implementasi: ''2026-07-15''.',
   `waktu_masuk` TIME DEFAULT NULL COMMENT 'Jam masuk presensi. Contoh implementasi: ''07:05:00''.',
   `waktu_keluar` TIME DEFAULT NULL COMMENT 'Jam keluar presensi. Contoh implementasi: ''14:55:00''.',
-  `waktu_pulang_plan` TIME NOT NULL DEFAULT '15:00:00' COMMENT 'Jam pulang yang direncanakan. Contoh implementasi: ''15:00:00''.',
+  `waktu_pulang_plan` TIME NOT NULL DEFAULT '15:00:00' COMMENT 'Jam pulang yang direncanakan. Contoh implementasi: ''15:00:00''.', -- perlu ada mekanisme untuk mengisi custom jam pulang
   `status` ENUM('hadir','terlambat','alpha','izin','sakit') NOT NULL DEFAULT 'alpha' COMMENT 'Status data. Nilai mengikuti ENUM pada kolom ini. Contoh implementasi: ''aktif''.',
-  `status_checkout` ENUM('belum_checkout','sudah_checkout','pulang_cepat') NOT NULL DEFAULT 'belum_checkout' COMMENT 'Status checkout/pulang. Contoh implementasi: ''sudah_checkout''.',
-  `bukti_izin_sakit` VARCHAR(255) DEFAULT NULL COMMENT 'Lokasi file bukti izin/sakit. Contoh implementasi: ''izin/2026-04-09/surat_dokter_220145.jpg''.',
-  `foto_scan_masuk` VARCHAR(255) DEFAULT NULL COMMENT 'Foto saat scan masuk. Contoh implementasi: ''scan_masuk/220145_20260409_070500.jpg''.',
-  `foto_scan_keluar` VARCHAR(255) DEFAULT NULL COMMENT 'Foto saat scan keluar. Contoh implementasi: ''scan_keluar/220145_20260409_145500.jpg''.',
+  `status_checkout` ENUM('belum_checkout','sudah_checkout','pulang_cepat') DEFAULT NULL COMMENT 'Status checkout/pulang. Contoh implementasi: ''sudah_checkout''.', -- diubah menjadi DEFAULT NULL 
+  `bukti_izin_sakit` VARCHAR(255) DEFAULT NULL COMMENT 'Lokasi file bukti izin/sakit. Contoh implementasi: ''izin/2026-04-09/surat_dokter_220145.jpg''.', -- butuh mekanisme penyimpanan foto izin!
+  `foto_scan_masuk` VARCHAR(255) DEFAULT NULL COMMENT 'Foto saat scan masuk. Contoh implementasi: ''scan_masuk/220145_20260409_070500.jpg''.', -- butuh mekanisme penyimpanan foto scan masuk!
+  `foto_scan_keluar` VARCHAR(255) DEFAULT NULL COMMENT 'Foto saat scan keluar. Contoh implementasi: ''scan_keluar/220145_20260409_145500.jpg''.', -- butuh mekanisme penyimpanan foto scan keluar!
   `scan_masuk_log_id` INT UNSIGNED DEFAULT NULL COMMENT 'Referensi log scan untuk masuk.',
   `scan_keluar_log_id` INT UNSIGNED DEFAULT NULL COMMENT 'Referensi log scan untuk keluar.',
   `jurusan_snapshot` VARCHAR(50) NOT NULL COMMENT 'Nama jurusan saat presensi diambil',
@@ -721,7 +721,7 @@ CREATE TABLE `presensi` (
 CREATE TABLE `sesi_ujian` (
 
   `sesi_ujian_id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID unik sesi ujian.',
-  `kode_ujian` VARCHAR(20) NOT NULL COMMENT 'Kode unik sesi ujian. Contoh implementasi: ''UTS-TKJ-01''.',
+  `kode_ujian` VARCHAR(20) NOT NULL COMMENT 'Kode unik sesi ujian. Contoh implementasi: ''UTS-TKJ-01''.', -- generate dari nama_ujian (deteksi UTS / UAS, dan kode ruangan berdasarkan id ruangan)
   `nama_ujian` VARCHAR(100) NOT NULL COMMENT 'Nama ujian. Contoh implementasi: ''UTS Semester Ganjil''.',
   `jurusan_id` INT UNSIGNED NOT NULL COMMENT 'Referensi jurusan terkait.',
   `ruangan_id` INT UNSIGNED NOT NULL COMMENT 'Referensi ruangan terkait.',
