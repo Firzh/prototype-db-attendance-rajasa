@@ -136,14 +136,13 @@ CREATE TABLE `jurusan` (
   `jurusan_id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID unik jurusan. Contoh implementasi: 1=TKJ.',
   `kode_jurusan` VARCHAR(10) NOT NULL COMMENT 'Kode unik jurusan. Contoh implementasi: ''TKJ'', ''RPL'', atau ''MM''.',
   `nama_jurusan` VARCHAR(100) NOT NULL COMMENT 'Nama lengkap jurusan. Contoh implementasi: ''Teknik Komputer dan Jaringan''.',
-  `singkatan` VARCHAR(10) NOT NULL COMMENT 'Singkatan jurusan untuk kebutuhan label cepat dan kompatibilitas laporan. Contoh implementasi: ''TKJ''.',
   `ketua_jurusan` VARCHAR(100) DEFAULT NULL COMMENT 'Nama ketua jurusan. Contoh implementasi: ''Drs. Ahmad''.',
+  `deskripsi_jurusan` VARCHAR(255) DEFAULT NULL COMMENT 'Catatan tambahan.',
   `status` ENUM('aktif','nonaktif') NOT NULL DEFAULT 'aktif' COMMENT 'Status data. Nilai mengikuti ENUM pada kolom ini. Contoh implementasi: ''aktif''.',
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Waktu record dibuat otomatis. Contoh implementasi: ''2026-04-09 08:15:00''.',
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Waktu record terakhir diperbarui otomatis. Contoh implementasi: ''2026-04-09 10:00:00''.',
   PRIMARY KEY (`jurusan_id`),
   UNIQUE KEY `uk_jurusan_kode` (`kode_jurusan`),
-  UNIQUE KEY `uk_jurusan_singkatan` (`singkatan`),
   KEY `idx_jurusan_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -194,6 +193,7 @@ CREATE TABLE `siswa` (
   `rombel_id_aktif` INT UNSIGNED DEFAULT NULL COMMENT 'Disimpan untuk sorting/filter cepat',
   `kelas_aktif` VARCHAR(20) DEFAULT NULL COMMENT 'Label kelas custom/snapshot cepat',
   `qr_vendor_link` TEXT DEFAULT NULL COMMENT 'Link URL vendor QR lama/opsional',
+  `catatan` VARCHAR(255) DEFAULT NULL COMMENT 'Catatan tambahan.',
   `status` ENUM('aktif','lulus','keluar','mutasi') NOT NULL DEFAULT 'aktif' COMMENT 'Status data. Nilai mengikuti ENUM pada kolom ini. Contoh implementasi: ''aktif''.',
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Waktu record dibuat otomatis. Contoh implementasi: ''2026-04-09 08:15:00''.',
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Waktu record terakhir diperbarui otomatis. Contoh implementasi: ''2026-04-09 10:00:00''.',
@@ -491,21 +491,15 @@ CREATE TABLE `ruangan` (
 
   `ruangan_id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID unik ruangan.',
   `kode_ruangan` VARCHAR(20) NOT NULL COMMENT 'Kode unik ruangan. Contoh implementasi: ''LAB-TKJ-01'' atau ''KLS-RPL-02''.',
-  `nama_ruangan` VARCHAR(50) NOT NULL COMMENT 'Nama ruangan. Contoh implementasi: ''Lab TKJ 1''.',
-  `jenis_ruangan` VARCHAR(30) NOT NULL COMMENT 'Kode jenis ruangan yang mengacu ke master_jenis_ruangan. Contoh implementasi: ''lab'', ''kelas_teori'', ''kantor'', ''perpustakaan'', atau jenis baru seperti ''studio'' tanpa perlu mengubah kode program.',
   `kapasitas` INT UNSIGNED NOT NULL DEFAULT 30 COMMENT 'Kapasitas maksimum ruangan. Contoh implementasi: 36 siswa.',
   `fasilitas` TEXT DEFAULT NULL COMMENT 'Deskripsi fasilitas ruangan. Contoh implementasi: ''36 PC, projector, AC''.',
   `lokasi` VARCHAR(100) DEFAULT NULL COMMENT 'Lokasi fisik ruangan. Contoh implementasi: ''Gedung A Lantai 2''.',
-  `status` ENUM('aktif','nonaktif','maintenance') NOT NULL DEFAULT 'aktif' COMMENT 'Status data. Nilai mengikuti ENUM pada kolom ini. Contoh implementasi: ''aktif''.',
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Waktu record dibuat otomatis. Contoh implementasi: ''2026-04-09 08:15:00''.',
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Waktu record terakhir diperbarui otomatis. Contoh implementasi: ''2026-04-09 10:00:00''.',
   PRIMARY KEY (`ruangan_id`),
   UNIQUE KEY `uk_ruangan_kode` (`kode_ruangan`),
-  KEY `idx_ruangan_status_jenis` (`status`, `jenis_ruangan`),
-  CONSTRAINT `fk_ruangan_jenis`
-    FOREIGN KEY (`jenis_ruangan`) REFERENCES `master_jenis_ruangan`(`kode_jenis_ruangan`)
-    ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+-- kode ruangan berdasarkan jurusan_ruangan_buffer.nama_ruangan capitalized & space --> '-'
 
 CREATE TABLE `perangkat_esp32` (
 
@@ -795,11 +789,11 @@ CREATE TABLE `presensi` (
   `jurusan_snapshot` VARCHAR(50) NOT NULL COMMENT 'Nama jurusan saat presensi diambil',
   `kelas_snapshot` VARCHAR(20) NOT NULL COMMENT 'Label kelas saat presensi diambil',
   `rombel_snapshot` VARCHAR(20) DEFAULT NULL COMMENT 'Label rombel saat presensi diambil',
+  `tahun_ajaran_snapshot` VARCHAR(9) DEFAULT NULL COMMENT 'Tahun ajaran saat presensi diambil. Contoh implementasi: ''2025/2026''.',
+  `semester_snapshot` ENUM('ganjil','genap','pendek') DEFAULT NULL COMMENT 'Semester saat presensi diambil. Contoh implementasi: ''ganjil''.',
   `validasi` ENUM('valid','tidak_valid','pending') NOT NULL DEFAULT 'valid' COMMENT 'Status validasi data. Contoh implementasi: ''valid'', ''pending'', atau ''tidak_valid''.',
   `diverifikasi_oleh` INT UNSIGNED DEFAULT NULL COMMENT 'User yang memverifikasi data. Contoh implementasi: admin akademik.',
-  `waktu_verifikasi` DATETIME DEFAULT NULL COMMENT 'Waktu data diverifikasi. Contoh implementasi: ''2026-04-09 09:00:00''.',
-  `keterangan` TEXT DEFAULT NULL COMMENT 'Keterangan tambahan. Contoh implementasi: alasan validasi, catatan scan, atau deskripsi event.',
-  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Waktu record dibuat otomatis. Contoh implementasi: ''2026-04-09 08:15:00''.',
+  `waktu_verifikasi` DATETIME DEFAULT NULL COMMENT 'Waktu data diverifikasi. Contoh implementasi: ''2026-04-09 09:00:00''.',  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Waktu record dibuat otomatis. Contoh implementasi: ''2026-04-09 08:15:00''.',
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Waktu record terakhir diperbarui otomatis. Contoh implementasi: ''2026-04-09 10:00:00''.',
   PRIMARY KEY (`presensi_id`),
   KEY `idx_presensi_tanggal_siswa` (`tanggal`, `siswa_id`),
@@ -1041,7 +1035,7 @@ CREATE TABLE `admin_activities` (
 
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID unik audit activity admin.',
   `user_id` INT UNSIGNED NOT NULL COMMENT 'Referensi user yang terkait. Contoh implementasi: user admin yang login atau menerima notifikasi.',
-  `activity_type` VARCHAR(50) NOT NULL COMMENT 'Jenis aktivitas admin. Contoh implementasi: ''login'', ''update_data'', ''export_report''.',
+  `activity_type` ENUM('login', 'update_data', 'export_report') NOT NULL COMMENT 'Jenis aktivitas admin. Contoh implementasi: ''login'', ''update_data'', ''export_report''.',
   `module_name` VARCHAR(50) DEFAULT NULL COMMENT 'Nama modul. Contoh implementasi: ''users'', ''attendance'', ''reports''.',
   `target_table` VARCHAR(50) DEFAULT NULL COMMENT 'Nama tabel target yang dipengaruhi. Contoh implementasi: ''presensi''.',
   `target_id` VARCHAR(100) DEFAULT NULL COMMENT 'ID target yang dipengaruhi. Contoh implementasi: ''12501''.',
@@ -1095,7 +1089,119 @@ CREATE TABLE `kalender_akademik` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =========================================================
--- 11. SEED DATA MINIMAL IAM
+-- 11. BUFFER VIEW TABLE
+-- =========================================================
+
+CREATE TABLE `jurusan_dashboard_buffer` (
+
+  `buffer_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `jurusan_id` INT UNSIGNED NOT NULL,
+  `kode_jurusan` VARCHAR(10) NOT NULL,
+  `nama_jurusan` VARCHAR(100) NOT NULL,
+  `ketua_jurusan_nama` VARCHAR(100) DEFAULT NULL,
+  `guru_id_ketua` INT UNSIGNED DEFAULT NULL,
+  `total_siswa` INT UNSIGNED NOT NULL DEFAULT 0,
+  `total_ruang_kelas` INT UNSIGNED NOT NULL DEFAULT 0,
+  `total_ruang_lab` INT UNSIGNED NOT NULL DEFAULT 0,
+  `tahun_ajaran` VARCHAR(9) DEFAULT NULL,
+  `semester` ENUM('ganjil','genap','pendek') DEFAULT NULL,
+  `status_jurusan` ENUM('aktif','nonaktif') NOT NULL DEFAULT 'aktif',
+  `sumber_perhitungan` ENUM('otomatis','manual') NOT NULL DEFAULT 'otomatis',
+  `last_sync_at` DATETIME DEFAULT NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`buffer_id`),
+  UNIQUE KEY `uk_jurusan_dashboard_buffer` (`jurusan_id`, `tahun_ajaran`, `semester`),
+  KEY `idx_jurusan_dashboard_status` (`status_jurusan`),
+  CONSTRAINT `fk_jurusan_dashboard_buffer_jurusan`
+    FOREIGN KEY (`jurusan_id`) REFERENCES `jurusan`(`jurusan_id`)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_jurusan_dashboard_buffer_guru`
+    FOREIGN KEY (`guru_id_ketua`) REFERENCES `guru_staff`(`guru_id`)
+    ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `jurusan_ruangan_buffer` (
+
+  `buffer_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `jurusan_id` INT UNSIGNED NOT NULL,
+  `ruangan_id` INT UNSIGNED NOT NULL,
+  `jenis_ruangan` ENUM('kelas','lab','kantor') NOT NULL DEFAULT 'kelas',
+  `nama_ruangan` VARCHAR(100) NOT NULL COMMENT 'Nama ruangan. Contoh implementasi: ''Lab TKJ 1''.',
+  `urut_auto` SMALLINT UNSIGNED NOT NULL DEFAULT 1 COMMENT 'Contoh implementasi: ''Lab TKJ 1,''Lab KJ 2''.',
+  `status` ENUM('aktif','nonaktif','maintenance') NOT NULL DEFAULT 'aktif',
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`buffer_id`),
+  UNIQUE KEY `uk_jurusan_ruangan` (`jurusan_id`,`nama_ruangan`),
+  CONSTRAINT `fk_buffer_jurusan` FOREIGN KEY (`jurusan_id`) REFERENCES `jurusan`(`jurusan_id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_buffer_ruangan` FOREIGN KEY (`ruangan_id`) REFERENCES `ruangan`(`ruangan_id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+-- memilih jenis ruangan saja
+-- nama ruangan auto generate dari jenis_ruangan, jurusan, dan auto increment
+
+
+-- =========================================================
+-- BUFFER SNAPSHOT PRESENSI (NONAKTIF / PENGEMBANGAN LANJUT)
+-- Tabel ini disiapkan bila nanti snapshot langsung di tabel `presensi`
+-- ingin dipusatkan agar penulisan lebih hemat dan konsisten.
+-- Untuk tahap sekarang sengaja masih di-comment.
+-- =========================================================
+
+-- CREATE TABLE `presensi_snapshot_buffer` (
+--
+--   `snapshot_buffer_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+--   `plotting_id` INT UNSIGNED DEFAULT NULL COMMENT 'Referensi plotting jika context berasal dari plotting reguler.',
+--   `ruangan_id` INT UNSIGNED DEFAULT NULL COMMENT 'Referensi ruangan context.',
+--   `jurusan_id` INT UNSIGNED DEFAULT NULL COMMENT 'Referensi jurusan context bila tersedia.',
+--   `jurusan_snapshot` VARCHAR(100) DEFAULT NULL COMMENT 'Nama jurusan hasil snapshot/buffer.',
+--   `kelas_snapshot` VARCHAR(20) DEFAULT NULL COMMENT 'Kelas hasil snapshot/buffer.',
+--   `rombel_snapshot` VARCHAR(30) DEFAULT NULL COMMENT 'Rombel hasil snapshot/buffer.',
+--   `tahun_ajaran_snapshot` VARCHAR(9) DEFAULT NULL COMMENT 'Tahun ajaran hasil snapshot/buffer.',
+--   `semester_snapshot` ENUM('ganjil','genap','pendek') DEFAULT NULL COMMENT 'Semester hasil snapshot/buffer.',
+--   `sumber_context` ENUM('plotting','manual','sinkron_online','custom_event') NOT NULL DEFAULT 'plotting',
+--   `signature_hash` CHAR(64) DEFAULT NULL COMMENT 'Hash kombinasi context agar snapshot identik bisa dipakai ulang.',
+--   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+--   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+--
+--   PRIMARY KEY (`snapshot_buffer_id`),
+--   UNIQUE KEY `uk_presensi_snapshot_signature` (`signature_hash`),
+--   KEY `idx_presensi_snapshot_lookup` (`plotting_id`,`ruangan_id`,`tahun_ajaran_snapshot`,`semester_snapshot`),
+--
+--   CONSTRAINT `fk_presensi_snapshot_plotting`
+--     FOREIGN KEY (`plotting_id`) REFERENCES `plotting_rombel`(`plotting_id`)
+--     ON DELETE SET NULL ON UPDATE CASCADE,
+--
+--   CONSTRAINT `fk_presensi_snapshot_ruangan`
+--     FOREIGN KEY (`ruangan_id`) REFERENCES `ruangan`(`ruangan_id`)
+--     ON DELETE SET NULL ON UPDATE CASCADE,
+--
+--   CONSTRAINT `fk_presensi_snapshot_jurusan`
+--     FOREIGN KEY (`jurusan_id`) REFERENCES `jurusan`(`jurusan_id`)
+--     ON DELETE SET NULL ON UPDATE CASCADE
+--
+-- ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- =========================================================
+-- MIGRASI BERTAHAP JIKA BUFFER SNAPSHOT DIAKTIFKAN (NONAKTIF)
+-- Kolom snapshot lama tetap dipertahankan sebagai fallback selama masa transisi.
+-- Jangan langsung drop kolom snapshot lama.
+-- =========================================================
+
+-- ALTER TABLE `presensi`
+--   ADD COLUMN `snapshot_buffer_id` BIGINT UNSIGNED DEFAULT NULL AFTER `jadwal_id`,
+--   MODIFY `jurusan_snapshot` VARCHAR(50) DEFAULT NULL COMMENT 'Fallback historis bila buffer belum dipakai atau data manual.',
+--   MODIFY `kelas_snapshot` VARCHAR(20) DEFAULT NULL COMMENT 'Fallback historis bila buffer belum dipakai atau data manual.',
+--   MODIFY `rombel_snapshot` VARCHAR(20) DEFAULT NULL COMMENT 'Fallback historis bila buffer belum dipakai atau data manual.',
+--   ADD KEY `idx_presensi_snapshot_buffer` (`snapshot_buffer_id`),
+--   ADD CONSTRAINT `fk_presensi_snapshot_buffer`
+--     FOREIGN KEY (`snapshot_buffer_id`) REFERENCES `presensi_snapshot_buffer`(`snapshot_buffer_id`)
+--     ON DELETE SET NULL ON UPDATE CASCADE;
+
+
+-- =========================================================
+-- 12. SEED DATA MINIMAL IAM
 -- =========================================================
 
 INSERT INTO `roles` (`nama_role`, `role_slug`, `deskripsi`, `is_system`) VALUES
@@ -1234,7 +1340,7 @@ WHERE (r.role_slug = 'super_admin' AND p.policy_slug = 'full_access')
    OR (r.role_slug = 'intern' AND p.policy_slug = 'intern_read_only');
 
 -- =========================================================
--- 12. VIEWS
+-- 13. VIEWS
 -- =========================================================
 
 CREATE OR REPLACE VIEW `v_siswa_transfer_masuk` AS
@@ -1272,26 +1378,7 @@ SELECT
 FROM `siswa_mutasi` sm
 WHERE sm.jenis_mutasi = 'keluar';
 
-CREATE OR REPLACE VIEW `v_log_scan_qr_detail` AS
--- log_id: Referensi/ID unik untuk log. Contoh implementasi: nilai numerik sesuai data master.
--- scan_uuid: UUID unik per kejadian scan. Contoh implementasi: '550e8400-e29b-41d4-a716-446655440000'.
--- status: Status data. Nilai mengikuti ENUM pada kolom ini. Contoh implementasi: 'aktif'.
--- scan_type: Jenis scan. Contoh implementasi: 'checkin', 'checkout', 'uji_coba', atau 'akses'.
--- scan_method: Metode input scan. Contoh implementasi: 'qr' otomatis atau 'manual' oleh operator.
--- keterangan: Keterangan tambahan. Contoh implementasi: alasan validasi, catatan scan, atau deskripsi event.
--- tanggal: Tanggal kejadian/transaksi. Contoh implementasi: '2026-07-15'.
--- waktu: Waktu kejadian. Contoh implementasi: '07:12:05'.
--- scanned_at: Tanggal dan waktu lengkap scan. Contoh implementasi: '2026-04-09 07:12:05'.
--- foto_capture: Path/file foto tangkapan kamera. Contoh implementasi: 'scan/2026/04/09/masuk_220145.jpg'.
--- kode_ruangan: Kode unik ruangan. Contoh implementasi: 'LAB-TKJ-01'.
--- nama_ruangan: Nama ruangan. Contoh implementasi: 'Lab Jaringan 1'.
--- nisn: Nomor induk siswa nasional. Contoh implementasi: '0065123456'.
--- nis: Nomor induk siswa internal sekolah. Contoh implementasi: '220145'.
--- nama_siswa: Nama siswa. Contoh implementasi: teks sesuai identitas master.
--- nama_jurusan: Nama jurusan. Contoh implementasi: 'Teknik Komputer dan Jaringan'.
--- qr_reference: Referensi pendek token QR untuk cetak/tampilan. Contoh implementasi: 'QR-SISWA-220145-A'.
--- mac_address: MAC address perangkat. Contoh implementasi: 'A4:CF:12:34:56:78'.
--- versi_firmware: Versi firmware perangkat. Contoh implementasi: '1.0.7'.
+CREATE OR REPLACE VIEW `v_log_scan_ringkas` AS
 SELECT
   l.log_id,
   l.scan_uuid,
@@ -1304,7 +1391,7 @@ SELECT
   l.scanned_at,
   l.foto_capture,
   r.kode_ruangan,
-  r.nama_ruangan,
+  COALESCE(jrb.nama_ruangan, r.kode_ruangan) AS nama_ruangan,
   s.nisn,
   s.nis,
   s.nama_lengkap AS nama_siswa,
@@ -1313,34 +1400,23 @@ SELECT
   p.mac_address,
   p.versi_firmware
 FROM `log_scan_qr` l
-JOIN `ruangan` r ON r.ruangan_id = l.ruangan_id
+JOIN `ruangan` r
+  ON r.ruangan_id = l.ruangan_id
+LEFT JOIN (
+  SELECT
+    ruangan_id,
+    MAX(nama_ruangan) AS nama_ruangan,
+    MAX(jenis_ruangan) AS jenis_ruangan
+  FROM `jurusan_ruangan_buffer`
+  WHERE `status` = 'aktif'
+  GROUP BY ruangan_id
+) jrb ON jrb.ruangan_id = l.ruangan_id
 LEFT JOIN `siswa` s ON s.siswa_id = l.siswa_id
 LEFT JOIN `jurusan` j ON j.jurusan_id = s.jurusan_id_aktif
 LEFT JOIN `qr_tokens` qt ON qt.qr_token_id = l.qr_token_id
 LEFT JOIN `perangkat_esp32` p ON p.perangkat_id = l.perangkat_id;
 
 CREATE OR REPLACE VIEW `v_presensi_detail` AS
--- presensi_id: Referensi/ID unik untuk presensi. Contoh implementasi: nilai numerik sesuai data master.
--- tanggal: Tanggal kejadian/transaksi. Contoh implementasi: '2026-07-15'.
--- waktu_masuk: Jam masuk presensi. Contoh implementasi: '07:05:00'.
--- waktu_keluar: Jam keluar presensi. Contoh implementasi: '14:55:00'.
--- waktu_pulang_plan: Jam pulang yang direncanakan. Contoh implementasi: '15:00:00'.
--- status: Status data. Nilai mengikuti ENUM pada kolom ini. Contoh implementasi: 'aktif'.
--- status_checkout: Status checkout/pulang. Contoh implementasi: 'sudah_checkout'.
--- keterangan: Keterangan tambahan. Contoh implementasi: alasan validasi, catatan scan, atau deskripsi event.
--- validasi: Status validasi data. Contoh implementasi: 'valid', 'pending', atau 'tidak_valid'.
--- nisn: Nomor induk siswa nasional. Contoh implementasi: '0065123456'.
--- nis: Nomor induk siswa internal sekolah. Contoh implementasi: '220145'.
--- nama_siswa: Nama siswa. Contoh implementasi: teks sesuai identitas master.
--- kelas: Kolom kelas. Contoh implementasi: isi sesuai kebutuhan modul v_presensi_detail.
--- rombel: Label rombel legacy/kustom. Contoh implementasi: 'TKJ-1'.
--- jurusan_snapshot: Nama jurusan saat transaksi terjadi untuk historis laporan. Contoh implementasi: 'Teknik Komputer dan Jaringan'.
--- nama_ruangan: Nama ruangan. Contoh implementasi: 'Lab Jaringan 1'.
--- kode_ruangan: Kode unik ruangan. Contoh implementasi: 'LAB-TKJ-01'.
--- qr_reference: Referensi pendek token QR untuk cetak/tampilan. Contoh implementasi: 'QR-SISWA-220145-A'.
--- bukti_izin_sakit: Lokasi file bukti izin/sakit. Contoh implementasi: 'izin/2026-04-09/surat_dokter_220145.jpg'.
--- foto_scan_masuk: Foto saat scan masuk. Contoh implementasi: 'scan_masuk/220145_20260409_070500.jpg'.
--- foto_scan_keluar: Foto saat scan keluar. Contoh implementasi: 'scan_keluar/220145_20260409_145500.jpg'.
 SELECT
   pr.presensi_id,
   pr.tanggal,
@@ -1351,48 +1427,123 @@ SELECT
   pr.status_checkout,
   pr.keterangan,
   pr.validasi,
+
   s.nisn,
   s.nis,
   s.nama_lengkap AS nama_siswa,
-  pr.kelas_snapshot AS kelas,
-  pr.rombel_snapshot AS rombel,
-  pr.jurusan_snapshot,
-  r.nama_ruangan,
+
+  COALESCE(
+    NULLIF(pr.kelas_snapshot, ''),
+    CAST(rb.tingkatan AS CHAR),
+    s.kelas_aktif
+  ) AS kelas,
+
+  COALESCE(
+    NULLIF(pr.rombel_snapshot, ''),
+    rb.label_rombel,
+    CONCAT(CAST(rb.tingkatan AS CHAR), '-', j_plot.kode_jurusan, '-', rb.nomor_rombel)
+  ) AS rombel,
+
+  COALESCE(
+    NULLIF(pr.jurusan_snapshot, ''),
+    j_plot.nama_jurusan,
+    j_siswa.nama_jurusan
+  ) AS jurusan_snapshot,
+
+  COALESCE(
+    NULLIF(pr.tahun_ajaran_snapshot, ''),
+    pl.tahun_ajaran
+  ) AS tahun_ajaran,
+
+  COALESCE(
+    pr.semester_snapshot,
+    pl.semester
+  ) AS semester,
+
+  jrb.jenis_ruangan,
+  COALESCE(jrb.nama_ruangan, r.kode_ruangan) AS nama_ruangan,
   r.kode_ruangan,
+
   qt.qr_reference,
   pr.bukti_izin_sakit,
   pr.foto_scan_masuk,
   pr.foto_scan_keluar
+
 FROM `presensi` pr
 JOIN `siswa` s ON s.siswa_id = pr.siswa_id
 JOIN `ruangan` r ON r.ruangan_id = pr.ruangan_id
+
+LEFT JOIN `plotting_rombel` pl ON pl.plotting_id = pr.plotting_id
+LEFT JOIN `rombel` rb ON rb.rombel_id = pl.rombel_id
+LEFT JOIN `jurusan` j_plot ON j_plot.jurusan_id = rb.jurusan_id
+LEFT JOIN `jurusan` j_siswa ON j_siswa.jurusan_id = s.jurusan_id_aktif
+
+LEFT JOIN (
+  SELECT
+    ruangan_id,
+    MAX(nama_ruangan) AS nama_ruangan,
+    MAX(jenis_ruangan) AS jenis_ruangan
+  FROM `jurusan_ruangan_buffer`
+  WHERE `status` = 'aktif'
+  GROUP BY ruangan_id
+) jrb ON jrb.ruangan_id = pr.ruangan_id
+
 LEFT JOIN `log_scan_qr` ls ON ls.log_id = pr.scan_masuk_log_id
 LEFT JOIN `qr_tokens` qt ON qt.qr_token_id = ls.qr_token_id;
 
 CREATE OR REPLACE VIEW `v_rekap_harian` AS
--- tanggal: Tanggal kejadian/transaksi. Contoh implementasi: '2026-07-15'.
--- nama_jurusan: Nama jurusan. Contoh implementasi: 'Teknik Komputer dan Jaringan'.
--- nama_ruangan: Nama ruangan. Contoh implementasi: 'Lab Jaringan 1'.
--- total_hadir: Kolom total_hadir. Contoh implementasi: isi sesuai kebutuhan modul v_rekap_harian.
--- total_terlambat: Kolom total_terlambat. Contoh implementasi: isi sesuai kebutuhan modul v_rekap_harian.
--- total_sakit: Kolom total_sakit. Contoh implementasi: isi sesuai kebutuhan modul v_rekap_harian.
--- total_izin: Kolom total_izin. Contoh implementasi: isi sesuai kebutuhan modul v_rekap_harian.
--- total_alpha: Kolom total_alpha. Contoh implementasi: isi sesuai kebutuhan modul v_rekap_harian.
--- total_siswa_tercatat: Kolom total_siswa_tercatat. Contoh implementasi: isi sesuai kebutuhan modul v_rekap_harian.
 SELECT
   pr.tanggal,
-  pr.jurusan_snapshot AS nama_jurusan,
-  r.nama_ruangan,
+
+  COALESCE(
+    NULLIF(pr.jurusan_snapshot, ''),
+    j_plot.nama_jurusan,
+    j_siswa.nama_jurusan
+  ) AS nama_jurusan,
+
+  COALESCE(jrb.nama_ruangan, r.kode_ruangan) AS nama_ruangan,
+
+  COALESCE(
+    NULLIF(pr.tahun_ajaran_snapshot, ''),
+    pl.tahun_ajaran
+  ) AS tahun_ajaran,
+
+  COALESCE(
+    pr.semester_snapshot,
+    pl.semester
+  ) AS semester,
+
   SUM(CASE WHEN pr.status = 'hadir' THEN 1 ELSE 0 END) AS total_hadir,
   SUM(CASE WHEN pr.status = 'terlambat' THEN 1 ELSE 0 END) AS total_terlambat,
   SUM(CASE WHEN pr.status = 'sakit' THEN 1 ELSE 0 END) AS total_sakit,
   SUM(CASE WHEN pr.status = 'izin' THEN 1 ELSE 0 END) AS total_izin,
   SUM(CASE WHEN pr.status = 'alpha' THEN 1 ELSE 0 END) AS total_alpha,
   COUNT(*) AS total_siswa_tercatat
+
 FROM `presensi` pr
 JOIN `ruangan` r ON r.ruangan_id = pr.ruangan_id
-GROUP BY pr.tanggal, pr.jurusan_snapshot, r.nama_ruangan;
 
+LEFT JOIN `plotting_rombel` pl ON pl.plotting_id = pr.plotting_id
+LEFT JOIN `rombel` rb ON rb.rombel_id = pl.rombel_id
+LEFT JOIN `jurusan` j_plot ON j_plot.jurusan_id = rb.jurusan_id
+LEFT JOIN `siswa` s ON s.siswa_id = pr.siswa_id
+LEFT JOIN `jurusan` j_siswa ON j_siswa.jurusan_id = s.jurusan_id_aktif
+
+LEFT JOIN (
+  SELECT
+    ruangan_id,
+    MAX(nama_ruangan) AS nama_ruangan
+  FROM `jurusan_ruangan_buffer`
+  WHERE `status` = 'aktif'
+  GROUP BY ruangan_id
+) jrb ON jrb.ruangan_id = pr.ruangan_id
+
+GROUP BY
+  pr.tanggal,
+  COALESCE(NULLIF(pr.jurusan_snapshot, ''), j_plot.nama_jurusan, j_siswa.nama_jurusan),
+  COALESCE(jrb.nama_ruangan, r.kode_ruangan),
+  COALESCE(NULLIF(pr.tahun_ajaran_snapshot, ''), pl.tahun_ajaran),
+  COALESCE(pr.semester_snapshot, pl.semester);
 
 
 CREATE OR REPLACE VIEW `v_presensi_online_detail` AS
@@ -1457,6 +1608,47 @@ SELECT
   m.retention_days,
   m.archived_at
 FROM `media_berkas` m;
+
+-- =========================================================
+-- 14. Auto Filler
+-- =========================================================
+
+-- Auto Filler jurusan_kelas_increment
+SET @max_urut := (SELECT COALESCE(MAX(urut_auto),0) FROM jurusan_ruangan_buffer
+                  WHERE jurusan_id = ? AND jenis_ruangan = 'kelas');
+
+INSERT INTO jurusan_ruangan_buffer (jurusan_id, jenis_ruangan, nama_ruangan, urut_auto)
+VALUES (?, 'kelas', CONCAT('Kelas ', (SELECT kode_jurusan FROM jurusan WHERE jurusan_id = ?), ' ', @max_urut + 1), @max_urut + 1);
+
+-- Auto Filler jurusan_kelas via jurusan & rombel
+INSERT INTO jurusan_ruangan_buffer (jurusan_id, jenis_ruangan, nama_ruangan, urut_auto, status)
+SELECT
+  j.jurusan_id,
+  r.jenis_ruangan,
+  CONCAT('Kelas ', j.kode_jurusan, ' ', COALESCE(MAX(b.urut_auto),0)+1),
+  COALESCE(MAX(b.urut_auto),0)+1,
+  'aktif'
+FROM jurusan j
+JOIN rombel rb ON rb.jurusan_id = j.jurusan_id
+JOIN plotting_rombel pr ON pr.rombel_id = rb.rombel_id
+JOIN ruangan r ON r.ruangan_id = pr.ruangan_id
+LEFT JOIN jurusan_ruangan_buffer b 
+       ON b.jurusan_id = j.jurusan_id AND b.jenis_ruangan = r.jenis_ruangan
+WHERE r.jenis_ruangan='kelas'
+GROUP BY j.jurusan_id, r.jenis_ruangan;
+
+-- =========================================================
+-- 15. Backfill
+-- =========================================================
+
+UPDATE `presensi` pr
+LEFT JOIN `plotting_rombel` pl
+  ON pl.plotting_id = pr.plotting_id
+SET
+  pr.tahun_ajaran_snapshot = COALESCE(pr.tahun_ajaran_snapshot, pl.tahun_ajaran),
+  pr.semester_snapshot = COALESCE(pr.semester_snapshot, pl.semester)
+WHERE pr.tahun_ajaran_snapshot IS NULL
+   OR pr.semester_snapshot IS NULL;
 
 -- =========================================================
 -- SELESAI
