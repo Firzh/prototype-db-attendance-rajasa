@@ -1,0 +1,92 @@
+[
+  {
+    "path": "ANALISIS_PEMOTONGAN_MODULAR_DB_3.8_MVP.md",
+    "sha256": "5648baa3c4ab5a8610abde6354ac23db9d87cc8d4dfbc36cb06a40bd0f8fe71e",
+    "size_bytes": 7564
+  },
+  {
+    "path": "MANIFEST_SHA256.json",
+    "sha256": "73f0ce48e6ac606a6d4d5a07ec5f127e5b2565f328cd1a0ef9a0065f82aaf109",
+    "size_bytes": 2591
+  },
+  {
+    "path": "README.md",
+    "sha256": "3536a573c4fb72d7359ea89ead308422137cae8189abdb9e9a937088cfb61943",
+    "size_bytes": 1181
+  },
+  {
+    "path": "STATIC_CHECK_REPORT.json",
+    "sha256": "e19a668b12fde48b167b1c3cdf6079f9a035d90f7d96b4a6828b33f57d1674fd",
+    "size_bytes": 786
+  },
+  {
+    "path": "modules/000_database_and_version.sql",
+    "sha256": "59ad75183b6c0c0583467ee948e281813b5c59c7da530af22ff549373bbd7f95",
+    "size_bytes": 732
+  },
+  {
+    "path": "modules/001_access_base.sql",
+    "sha256": "76583d2ac40beb548944be6dde067fd4fbb84dbb51989d66a6ef249720009a8b",
+    "size_bytes": 8770
+  },
+  {
+    "path": "modules/002_academic_identity.sql",
+    "sha256": "55b20892c1f1397dcd470c6765c17ffeed8b57afeb90dcbf889e833116529f1d",
+    "size_bytes": 14997
+  },
+  {
+    "path": "modules/003_users_access_runtime.sql",
+    "sha256": "38b68fa1eae15cc1331a52e1223a158d1c39ac3b540155308b31fe3c2b43ff9e",
+    "size_bytes": 16001
+  },
+  {
+    "path": "modules/004_facility_schedule_scanner.sql",
+    "sha256": "a638daa6d23a209c35d32155cf021ba2c8cde5cce2ec4d583b37a465dd45d7b6",
+    "size_bytes": 18027
+  },
+  {
+    "path": "modules/005_files_archive_audit.sql",
+    "sha256": "d13e0924a6fbf96a389bca558308223e61bd3cd3aa2006073885b68725065222",
+    "size_bytes": 16189
+  },
+  {
+    "path": "modules/006_attendance_qr_online.sql",
+    "sha256": "a136072ef6090aae0c51ce2b3474b2355c40b691bb0e971931712ad8226eca75",
+    "size_bytes": 27558
+  },
+  {
+    "path": "modules/007_support_config_buffers.sql",
+    "sha256": "6da500bd598f250d5a731aa67377ce0a38686f2f8a9f1c89dbace3a5a473c436",
+    "size_bytes": 15108
+  },
+  {
+    "path": "modules/008_import_wizard.sql",
+    "sha256": "f4c9e24df1dad6d82b7c048322fa1c88c32e4f2cd9787e3292610829183db661",
+    "size_bytes": 6965
+  },
+  {
+    "path": "modules/009_notification_lite.sql",
+    "sha256": "23b3ca88c86a837cac0000bfd3312e1b08916ccf1981b9486a562b2fdac83f4d",
+    "size_bytes": 12045
+  },
+  {
+    "path": "modules/010_seed_minimal_mvp.sql",
+    "sha256": "ae2afe645da652e1360292eb08e4588ad932882cb1d38322640755241d94ca74",
+    "size_bytes": 16509
+  },
+  {
+    "path": "modules/011_views_mvp.sql",
+    "sha256": "2030f31b263d13ace34313d24aaeec49c02791f948cab9cfedf6c825f878602c",
+    "size_bytes": 5740
+  },
+  {
+    "path": "modules/999_install_all.sql",
+    "sha256": "3d5e455d1ab45bc3700d2cdfd1ab16200b3ed09d327b3408a71bbcdf96a8684f",
+    "size_bytes": 1194
+  },
+  {
+    "path": "prototype-db-3.8-mvp-modular-all.sql",
+    "sha256": "1e8b2104272a18cdf8f990df64843a3bc800644e72883838710b9cf6845a6d7f",
+    "size_bytes": 160673
+  }
+]

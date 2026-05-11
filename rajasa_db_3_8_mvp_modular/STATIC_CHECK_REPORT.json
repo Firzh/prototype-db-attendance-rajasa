@@ -1,0 +1,29 @@
+{
+  "total_tables_created": 61,
+  "removed_tables_still_present": [],
+  "removed_tables_absent": [
+    "ai_recognition_jobs",
+    "mata_pelajaran",
+    "nilai_akademik",
+    "peserta_ujian",
+    "sesi_ujian"
+  ],
+  "fk_errors": [],
+  "future_tokens_sql": {
+    "ai_recognition_jobs": false,
+    "sesi_ujian": false,
+    "peserta_ujian": false,
+    "nilai_akademik": false,
+    "mata_pelajaran": false,
+    "grades_permission": false,
+    "exams_permission": false,
+    "ai_manage_permission": false,
+    "notification_whatsapp": false,
+    "notification_email_enabled": false
+  },
+  "presensi_scanner_session_index_present": true,
+  "presensi_session_unique_present": true,
+  "log_scan_ruangan_nullable": true,
+  "notification_channels_lite": true,
+  "import_jobs_no_nilai_enum": true
+}
