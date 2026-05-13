@@ -129,11 +129,18 @@ CREATE TABLE `notifikasi_penerima` (
     ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Backend contract:
+-- 1. event_key NULL means module-level user preference. Example: one default preference for all attendance events.
+-- 2. event_key with value means event-level override. Example: attendance.scan_failed.
+-- 3. Backend must not query UNIQUE by event_key directly when event_key is nullable. Use event_key_key = IFNULL(event_key, '*') semantics.
+-- 4. When writing module-level preference, send event_key as NULL. Do not send empty string.
+-- 5. Upsert target is user_id + module_name + event_key_key, not user_id + module_name + event_key.
 CREATE TABLE `user_notification_preferences` (
   `preference_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   `user_id` INT UNSIGNED NOT NULL,
   `module_name` VARCHAR(50) NOT NULL,
-  `event_key` VARCHAR(100) DEFAULT NULL,
+  `event_key` VARCHAR(100) DEFAULT NULL COMMENT 'NULL berarti preferensi default level modul. Nilai spesifik berarti override untuk event tertentu.',
+  `event_key_key` VARCHAR(100) GENERATED ALWAYS AS (IFNULL(`event_key`, '*')) STORED COMMENT 'Kunci normalisasi agar event_key NULL tetap unik pada level modul.',
   `frequency` ENUM('instant','daily','weekly','off') NOT NULL DEFAULT 'instant',
   `popup_enabled` TINYINT(1) NOT NULL DEFAULT 1,
   `inbox_enabled` TINYINT(1) NOT NULL DEFAULT 1,
@@ -146,8 +153,8 @@ CREATE TABLE `user_notification_preferences` (
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`preference_id`),
-  UNIQUE KEY `uk_user_notification_pref` (`user_id`, `module_name`, `event_key`),
-  KEY `idx_user_notification_pref_module` (`module_name`, `event_key`),
+  UNIQUE KEY `uk_user_notification_pref` (`user_id`, `module_name`, `event_key_key`),
+  KEY `idx_user_notification_pref_module` (`module_name`, `event_key_key`),
   KEY `idx_user_notification_pref_configured_by` (`configured_by_user_id`),
   CONSTRAINT `fk_user_notification_pref_user`
     FOREIGN KEY (`user_id`) REFERENCES `users`(`user_id`)

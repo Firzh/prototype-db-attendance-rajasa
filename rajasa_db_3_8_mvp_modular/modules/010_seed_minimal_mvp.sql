@@ -198,7 +198,6 @@ VALUES
   ('academic.tahun_ajaran_aktif', NULL, 'string', 'Tahun ajaran aktif untuk default import/plotting. Diisi oleh admin.'),
   ('academic.semester_aktif', 'ganjil', 'string', 'Semester aktif default untuk import/plotting.'),
   ('import.default_backend_parser', 'openspout', 'string', 'Parser backend default untuk import Excel/CSV.'),
-  ('plotting.max_rombel_per_ruang_kelas', '2', 'number', 'Batas maksimal rombel aktif pada satu ruangan jenis kelas per tahun ajaran/semester.'),
   ('scanner.default_lokasi_mode', 'tidak_dicatat', 'string', 'Default lokasi sesi scan agar guru tidak wajib update ruangan setiap pindah ruang.'),
   ('notification.channels.enabled', '["in_app","system"]', 'json', 'Channel notifikasi aktif pada MVP. Channel eksternal tidak disertakan.')
 ON DUPLICATE KEY UPDATE

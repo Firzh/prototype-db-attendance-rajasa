@@ -150,10 +150,15 @@ CREATE TABLE `scanner_sessions` (
   `scanner_device_id` INT UNSIGNED DEFAULT NULL COMMENT 'Referensi device scanner web.',
   `opened_by_user_id` INT UNSIGNED NOT NULL COMMENT 'User yang membuka sesi scan. Umumnya guru, admin, atau staff.',
   `closed_by_user_id` INT UNSIGNED DEFAULT NULL COMMENT 'User yang menutup sesi scan. Boleh NULL jika sesi kedaluwarsa/terputus.',
-  `context_type` ENUM('rombel','ruangan','jadwal') NOT NULL DEFAULT 'rombel' COMMENT 'Konteks scan. Untuk opsi A, default rombel.',
-  `selected_rombel_id` INT UNSIGNED DEFAULT NULL COMMENT 'Rombel yang dipilih user sebelum scan. Wajib untuk opsi A.',
-  `ruangan_id` INT UNSIGNED DEFAULT NULL COMMENT 'Ruangan hasil turunan dari plotting_rombel aktif. Wajib diisi backend sebelum scan produktif.',
-  `plotting_id` INT UNSIGNED DEFAULT NULL COMMENT 'Plotting aktif yang menjadi dasar relasi rombel ke ruangan.',
+  `context_type` ENUM('rombel','ruangan','jadwal') NOT NULL DEFAULT 'rombel' COMMENT 'Konteks scan. Untuk alur MVP guru scan via web, default rombel.',
+  `selected_rombel_id` INT UNSIGNED DEFAULT NULL COMMENT 'Rombel yang dipilih user sebelum scan. Wajib diisi backend ketika context_type=rombel.',
+  `selected_rombel_key` INT UNSIGNED GENERATED ALWAYS AS (IFNULL(`selected_rombel_id`, 0)) STORED COMMENT 'Generated key agar unique session tetap bekerja walau selected_rombel_id NULL.',
+  `selected_rombel_label_snapshot` VARCHAR(30) DEFAULT NULL COMMENT 'Snapshot label rombel saat sesi dibuka. Contoh: 10 AKL.',
+  `ruangan_id` INT UNSIGNED DEFAULT NULL COMMENT 'Ruangan opsional pada DB 3.8. Tidak wajib karena ruang kelas/lab dapat berganti-ganti.',
+  `lokasi_mode` ENUM('master_ruangan','input_manual','tidak_dicatat','fleksibel') NOT NULL DEFAULT 'tidak_dicatat' COMMENT 'Mode lokasi presensi. Default tidak_dicatat agar guru tidak wajib update ruangan setiap pindah ruang.',
+  `ruangan_label_manual` VARCHAR(100) DEFAULT NULL COMMENT 'Nama lokasi manual saat lokasi_mode=input_manual. Contoh: Ruang sementara lantai 2.',
+  `ruangan_label_snapshot` VARCHAR(100) DEFAULT NULL COMMENT 'Snapshot label lokasi pada saat sesi dibuka. Bisa berasal dari master, manual, atau fleksibel.',
+  `plotting_id` INT UNSIGNED DEFAULT NULL COMMENT 'Plotting aktif yang menjadi dasar relasi rombel ke ruangan bila tersedia.',
   `jadwal_id` INT UNSIGNED DEFAULT NULL COMMENT 'Jadwal terkait bila sesi scan berbasis jadwal lab.',
   `scan_type_default` ENUM('checkin','checkout') NOT NULL DEFAULT 'checkin' COMMENT 'Jenis scan default pada sesi ini.',
   `tanggal` DATE NOT NULL COMMENT 'Tanggal sesi scan.',
@@ -161,7 +166,7 @@ CREATE TABLE `scanner_sessions` (
   `semester` ENUM('ganjil','genap','pendek') DEFAULT NULL COMMENT 'Snapshot semester saat sesi dibuat.',
   `status` ENUM('aktif','dijeda','selesai','dibatalkan','kedaluwarsa','terputus') NOT NULL DEFAULT 'aktif' COMMENT 'Status operasional sesi scan.',
   `ended_reason` ENUM('selesai_normal','user_keluar_halaman','pause_manual','resume_manual','timeout','dibatalkan_user','system_cleanup','lainnya') DEFAULT NULL COMMENT 'Alasan sesi berubah/berakhir. Detail event tetap dapat dicatat di user_activities.',
-  `open_unique_key` TINYINT(1) GENERATED ALWAYS AS (CASE WHEN `status` IN ('aktif','dijeda','terputus') THEN 1 ELSE NULL END) STORED COMMENT 'Kunci bantu agar user tidak membuka beberapa sesi aktif untuk rombel dan tipe scan yang sama.',
+  `open_unique_key` TINYINT(1) GENERATED ALWAYS AS (CASE WHEN `status` IN ('aktif','dijeda','terputus') THEN 1 ELSE NULL END) STORED COMMENT 'Kunci bantu agar satu rombel tidak memiliki beberapa sesi aktif untuk tanggal dan tipe scan yang sama.',
   `started_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Waktu sesi dimulai.',
   `last_seen_at` DATETIME DEFAULT NULL COMMENT 'Heartbeat terakhir dari halaman scan. Dipakai untuk mendeteksi user keluar/terputus.',
   `paused_at` DATETIME DEFAULT NULL COMMENT 'Waktu sesi dijeda manual oleh user.',
@@ -171,10 +176,11 @@ CREATE TABLE `scanner_sessions` (
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`scanner_session_id`),
   UNIQUE KEY `uk_scanner_sessions_uuid` (`session_uuid`),
-  UNIQUE KEY `uk_scanner_sessions_open_context` (`opened_by_user_id`, `tanggal`, `selected_rombel_id`, `scan_type_default`, `open_unique_key`),
+  UNIQUE KEY `uk_scanner_sessions_open_context` (`tanggal`, `context_type`, `selected_rombel_key`, `scan_type_default`, `open_unique_key`),
   KEY `idx_scanner_sessions_user_date` (`opened_by_user_id`, `tanggal`, `status`),
   KEY `idx_scanner_sessions_context` (`context_type`, `selected_rombel_id`, `ruangan_id`, `jadwal_id`, `status`),
   KEY `idx_scanner_sessions_plotting` (`plotting_id`, `tanggal`, `status`),
+  KEY `idx_scanner_sessions_lokasi_mode` (`lokasi_mode`, `tanggal`, `status`),
   CONSTRAINT `fk_scanner_sessions_device`
     FOREIGN KEY (`scanner_device_id`) REFERENCES `scanner_devices`(`scanner_device_id`)
     ON DELETE SET NULL ON UPDATE CASCADE,
@@ -197,14 +203,4 @@ CREATE TABLE `scanner_sessions` (
     FOREIGN KEY (`jadwal_id`) REFERENCES `jadwal_lab`(`jadwal_id`)
     ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- 4. PATCH SCANNER SESSION: RUANGAN FLEKSIBEL
--- =========================================================
-ALTER TABLE `scanner_sessions`
-  ADD COLUMN `selected_rombel_label_snapshot` VARCHAR(30) DEFAULT NULL COMMENT 'Snapshot label rombel saat sesi dibuka. Contoh: 10 AKL.' AFTER `selected_rombel_id`,
-  MODIFY COLUMN `ruangan_id` INT UNSIGNED DEFAULT NULL COMMENT 'Ruangan opsional pada DB 3.8. Tidak wajib karena ruang kelas/lab dapat berganti-ganti.',
-  ADD COLUMN `lokasi_mode` ENUM('master_ruangan','input_manual','tidak_dicatat','fleksibel') NOT NULL DEFAULT 'tidak_dicatat' COMMENT 'Mode lokasi presensi. Default tidak_dicatat agar guru tidak wajib update ruangan setiap pindah ruang.' AFTER `ruangan_id`,
-  ADD COLUMN `ruangan_label_manual` VARCHAR(100) DEFAULT NULL COMMENT 'Nama lokasi manual saat lokasi_mode=input_manual. Contoh: Ruang sementara lantai 2.' AFTER `lokasi_mode`,
-  ADD COLUMN `ruangan_label_snapshot` VARCHAR(100) DEFAULT NULL COMMENT 'Snapshot label lokasi pada saat sesi dibuka. Bisa berasal dari master, manual, atau fleksibel.' AFTER `ruangan_label_manual`,
-  ADD KEY `idx_scanner_sessions_lokasi_mode` (`lokasi_mode`, `tanggal`, `status`);
 

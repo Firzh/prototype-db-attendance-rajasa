@@ -190,7 +190,12 @@ CREATE TABLE `jurusan_ruangan_buffer` (
   CONSTRAINT `fk_buffer_ruangan` FOREIGN KEY (`ruangan_id`) REFERENCES `ruangan`(`ruangan_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE `presensi_snapshot_buffer` (
+-- NOTE:
+-- presensi_snapshot_buffer pernah dirancang sebagai buffer snapshot presensi,
+-- tetapi tidak dipakai pada MVP modular karena alur presensi memakai scanner_sessions.
+-- Jangan aktifkan kembali tanpa kebutuhan backend yang jelas.
+
+-- CREATE TABLE `presensi_snapshot_buffer` (
 --
 --   `snapshot_buffer_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 --   `plotting_id` INT UNSIGNED DEFAULT NULL COMMENT 'Referensi plotting jika context berasal dari plotting reguler.',

@@ -1,0 +1,10 @@
+1. Fix module 007: hapus skeleton presensi_snapshot_buffer yang rusak.			[done]
+2. Kunci idempotency presensi lintas sesi guru.						[1/2 done]
+3. Ubah default legacy_esp32 / qr_esp32 agar sesuai web HP scanner.			[...]
+4. Hapus/ubah konfigurasi max 2 rombel per ruang.					[done]
+5. Perbaiki unique user_notification_preferences untuk event_key NULL.			[done]
+6. Tambahkan aturan agar selected_rombel_id wajib saat context_type = rombel.
+7. Rapikan dualisme notifikasi_admin vs notifikasi baru.
+8. ada bug view/import yang blocking;
+9. static check belum memeriksa konsistensi view terhadap kolom tabel;
+10. v_presensi_session_rekap terdefinisi dua kali di 011_views_mvp.sql;

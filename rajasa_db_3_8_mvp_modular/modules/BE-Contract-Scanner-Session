@@ -1,0 +1,11 @@
+### Backend Contract - Scanner Session
+
+Modul scanner menggunakan konsep satu sesi aktif untuk satu konteks presensi. Konteks sesi ditentukan oleh tanggal, context_type, selected_rombel_id, scan_type_default, dan open_unique_key.
+
+Backend tidak boleh membuat sesi baru secara langsung setiap kali guru membuka halaman scan. Backend harus mencari sesi aktif terlebih dahulu. Jika sesi aktif sudah tersedia untuk konteks yang sama, backend harus mengembalikan sesi tersebut.
+
+Untuk context_type = rombel, selected_rombel_id wajib diisi. Request tanpa selected_rombel_id harus ditolak.
+
+Sumber presensi dari browser/HP wajib dicatat sebagai qr_web. Backend tidak boleh membiarkan nilai default legacy_esp32 atau qr_esp32 digunakan pada alur scanner web.
+
+Proses scan QR harus idempotent. Scan ulang terhadap siswa yang sama dalam konteks presensi yang sama tidak boleh membuat data presensi baru, tetapi harus mengembalikan status already_exists.
