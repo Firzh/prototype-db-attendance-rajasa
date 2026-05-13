@@ -1,0 +1,20 @@
+menyusun manual:
+- perbaiki database segera
+-- definisikan scope database terhadap use case 
+-- pengurangan scope db
+
+kondisi db:
+- modular
+-- pengurangan scope secara brutal
+-- penghilangan view secara brutal
+-- hubungan antar tabel lebih jelas
+
+- solid 1 file
+-- scope penuh & meluber
+-- belum menyesuaikan dengan data mitra
+-- hubungan antar tabel masih terlalu coupling karena menganggap data lengkap
+-- view banyak dan mugkin terlalu banyak
+-- hubungan antar tabel dipertanyakan
+
+keputusan:
+- pengurangan scope db solid

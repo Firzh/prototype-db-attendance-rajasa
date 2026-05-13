@@ -1,11 +1,9 @@
 -- =========================================================
 -- PROTOTYPE DB ATTENDANCE RAJASA - VERSION 3.8
+-- Generated from prototype-db-3.7.sql + DB 3.8 migration patch
 -- Revision date: 2026-05-11
--- 1) Data mitra minimal: NO, NISN, NAMA, KELAS.
--- 2) Rombel tanpa inkremen di UI: 10 AKL tetap tampil 10 AKL.
--- 3) nomor_rombel=1 hanya dipakai internal ketika hanya ada satu rombel.
--- 4) Ruangan fisik fleksibel dan tidak menjadi syarat presensi MVP.
--- 5) Presensi QR web berbasis scanner_session + siswa.-- =========================================================
+-- Scope: minimal mitra data contract, rombel display without increment, flexible scanner session location.
+-- =========================================================
 
 -- ---------------------------------------------------------
 -- CATATAN DESAIN PENTING
@@ -627,6 +625,26 @@ CREATE TABLE `plotting_rombel` (
     ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Tabel buffer jadwal aktual agar plotting tidak terlalu kaku
+CREATE TABLE `jadwal_lab` (
+
+  `jadwal_id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID unik jadwal lab.',
+  `plotting_id` INT UNSIGNED NOT NULL COMMENT 'Referensi plotting rombel terkait.',
+  `hari` ENUM('senin','selasa','rabu','kamis','jumat','sabtu','minggu') NOT NULL COMMENT 'Hari pelaksanaan jadwal. Contoh implementasi: ''senin''.',
+  `jam_mulai` TIME NOT NULL COMMENT 'Jam mulai jadwal. Contoh implementasi: ''07:00:00''.',
+  `jam_selesai` TIME NOT NULL COMMENT 'Jam selesai jadwal. Contoh implementasi: ''09:30:00''.',
+  `toleransi_terlambat_menit` SMALLINT UNSIGNED NOT NULL DEFAULT 15 COMMENT 'Batas keterlambatan dalam menit. Contoh implementasi: 15.',
+  `qr_checkout_wajib` TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Penanda apakah scan pulang wajib. Nilai 1 berarti siswa wajib melakukan scan saat keluar agar status pulang dianggap lengkap. Nilai 0 berarti checkout tidak diwajibkan.',
+  `status` ENUM('aktif','nonaktif') NOT NULL DEFAULT 'aktif' COMMENT 'Status data. Nilai mengikuti ENUM pada kolom ini. Contoh implementasi: ''aktif''.',
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Waktu record dibuat otomatis. Contoh implementasi: ''2026-04-09 08:15:00''.',
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Waktu record terakhir diperbarui otomatis. Contoh implementasi: ''2026-04-09 10:00:00''.',
+  PRIMARY KEY (`jadwal_id`),
+  UNIQUE KEY `uk_jadwal_lab_unique` (`plotting_id`, `hari`, `jam_mulai`, `jam_selesai`),
+  KEY `idx_jadwal_lab_lookup` (`hari`, `jam_mulai`, `status`),
+  CONSTRAINT `fk_jadwal_lab_plotting`
+    FOREIGN KEY (`plotting_id`) REFERENCES `plotting_rombel`(`plotting_id`)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =========================================================
 -- 5. MANAJEMEN BERKAS & ARSIP
@@ -873,7 +891,186 @@ CREATE TABLE `presensi` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =========================================================
--- 8. KONFIGURASI, LOG, NOTIFIKASI, KALENDER
+-- 8. PRESENSI ONLINE, BUKTI PEMBELAJARAN, DAN PERSIAPAN AI
+-- =========================================================
+
+CREATE TABLE `presensi_online` (
+
+  `presensi_online_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID unik pengajuan presensi online.',
+  `submission_uuid` CHAR(36) NOT NULL COMMENT 'UUID unik submission agar aman dipakai di sisi client/API.',
+  `siswa_id` INT UNSIGNED NOT NULL COMMENT 'Referensi siswa yang mengajukan presensi online.',
+  `tanggal_presensi` DATE NOT NULL COMMENT 'Tanggal presensi online yang diajukan.',
+  `waktu_submit` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Waktu siswa mengirim bukti presensi online.',
+  `plotting_id` INT UNSIGNED DEFAULT NULL COMMENT 'Referensi plotting rombel bila presensi online masih terkait kelas/rombel reguler.',
+  `jadwal_id` INT UNSIGNED DEFAULT NULL COMMENT 'Referensi jadwal bila presensi online terkait sesi terjadwal.',
+  `mode_pembelajaran` ENUM('daring_sinkron','daring_asinkron','tugas_wa','blended','lainnya') NOT NULL DEFAULT 'daring_sinkron' COMMENT 'Mode pembelajaran yang diikuti siswa.',
+  `platform_bukti` ENUM('zoom','gmeet','wa','lms','upload_manual','lainnya') NOT NULL DEFAULT 'upload_manual' COMMENT 'Platform utama sumber bukti presensi.',
+  `status_pengajuan` ENUM('draft','diajukan','ditinjau','disetujui','ditolak','perlu_perbaikan') NOT NULL DEFAULT 'diajukan' COMMENT 'Status alur pengajuan presensi online.',
+  `status_presensi_final` ENUM('hadir','izin','sakit','tugas','alpha') NOT NULL DEFAULT 'hadir' COMMENT 'Keputusan status presensi akhir setelah diverifikasi.',
+  `metode_verifikasi` ENUM('manual','manual_dengan_bantuan_ai','ai_otomatis') NOT NULL DEFAULT 'manual' COMMENT 'Metode verifikasi. Saat ini default manual sesuai kebutuhan awal sistem.',
+  `ai_status` ENUM('pending_pengembangan','belum_dikirim','antri','diproses','selesai','gagal','diabaikan') NOT NULL DEFAULT 'pending_pengembangan' COMMENT 'Status integrasi AI lokal ringan. Default ''pending_pengembangan'' sampai modul AI benar-benar diaktifkan.',
+  `catatan_siswa` TEXT DEFAULT NULL COMMENT 'Catatan dari siswa saat mengirim bukti. Contoh implementasi: ''Mengikuti Zoom dari rumah, lampiran screenshot dan selfie''.',
+  `catatan_verifikator` TEXT DEFAULT NULL COMMENT 'Catatan guru/operator saat meninjau pengajuan. Field ini menyimpan snapshot keputusan terakhir untuk akses cepat; histori lengkap tetap dicatat di presensi_online_verifikasi.',
+  `diverifikasi_oleh` INT UNSIGNED DEFAULT NULL COMMENT 'User guru/staff yang memverifikasi pengajuan presensi online terakhir. Histori lengkap tetap dicatat di presensi_online_verifikasi.',
+  `waktu_verifikasi` DATETIME DEFAULT NULL COMMENT 'Waktu keputusan verifikasi terakhir dibuat. Histori lengkap tetap dicatat di presensi_online_verifikasi.',
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Waktu record dibuat otomatis. Contoh implementasi: ''2026-04-09 08:15:00''.',
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Waktu record terakhir diperbarui otomatis. Contoh implementasi: ''2026-04-09 10:00:00''.',
+  PRIMARY KEY (`presensi_online_id`),
+  UNIQUE KEY `uk_presensi_online_submission_uuid` (`submission_uuid`),
+  KEY `idx_presensi_online_lookup` (`tanggal_presensi`, `status_pengajuan`, `status_presensi_final`),
+  KEY `idx_presensi_online_siswa` (`siswa_id`, `tanggal_presensi`),
+  CONSTRAINT `fk_presensi_online_siswa`
+    FOREIGN KEY (`siswa_id`) REFERENCES `siswa`(`siswa_id`)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_presensi_online_plotting`
+    FOREIGN KEY (`plotting_id`) REFERENCES `plotting_rombel`(`plotting_id`)
+    ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `fk_presensi_online_jadwal`
+    FOREIGN KEY (`jadwal_id`) REFERENCES `jadwal_lab`(`jadwal_id`)
+    ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `fk_presensi_online_diverifikasi_oleh`
+    FOREIGN KEY (`diverifikasi_oleh`) REFERENCES `users`(`user_id`)
+    ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `presensi_online_lampiran` (
+
+  `lampiran_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID unik lampiran bukti presensi online.',
+  `presensi_online_id` BIGINT UNSIGNED NOT NULL COMMENT 'Referensi pengajuan presensi online.',
+  `media_id` BIGINT UNSIGNED NOT NULL COMMENT 'Referensi metadata file pada media_berkas.',
+  `jenis_bukti` ENUM('selfie','screenshot_zoom','screenshot_gmeet','bukti_chat_wa','dokumen_pendukung') NOT NULL COMMENT 'Jenis bukti yang dilampirkan.',
+  `is_utama` TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Penanda lampiran utama yang paling representatif.',
+  `urutan_tampil` SMALLINT UNSIGNED NOT NULL DEFAULT 1 COMMENT 'Urutan tampilan lampiran di UI review.',
+  `catatan` VARCHAR(255) DEFAULT NULL COMMENT 'Catatan singkat lampiran. Contoh implementasi: ''Selfie saat kelas dimulai''.',
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Waktu record dibuat otomatis. Contoh implementasi: ''2026-04-09 08:15:00''.',
+  PRIMARY KEY (`lampiran_id`),
+  UNIQUE KEY `uk_presensi_online_lampiran_media` (`presensi_online_id`, `media_id`),
+  KEY `idx_presensi_online_lampiran_jenis` (`jenis_bukti`, `is_utama`),
+  CONSTRAINT `fk_presensi_online_lampiran_submission`
+    FOREIGN KEY (`presensi_online_id`) REFERENCES `presensi_online`(`presensi_online_id`)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_presensi_online_lampiran_media`
+    FOREIGN KEY (`media_id`) REFERENCES `media_berkas`(`media_id`)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `presensi_online_verifikasi` (
+
+  `verifikasi_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID unik riwayat verifikasi presensi online.',
+  `presensi_online_id` BIGINT UNSIGNED NOT NULL COMMENT 'Referensi pengajuan presensi online.',
+  `verifikator_user_id` INT UNSIGNED NOT NULL COMMENT 'User guru/staff yang melakukan review.',
+  `keputusan` ENUM('ditinjau','disetujui','ditolak','perlu_perbaikan') NOT NULL DEFAULT 'ditinjau' COMMENT 'Keputusan verifikasi untuk submission tertentu.',
+  `status_presensi_hasil` ENUM('hadir','izin','sakit','tugas','alpha') NOT NULL DEFAULT 'hadir' COMMENT 'Status presensi hasil review.',
+  `catatan_verifikasi` TEXT DEFAULT NULL COMMENT 'Catatan detail review manual. Contoh implementasi: ''Selfie sesuai, screenshot Zoom valid''.',
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Waktu record dibuat otomatis. Contoh implementasi: ''2026-04-09 08:15:00''.',
+  PRIMARY KEY (`verifikasi_id`),
+  KEY `idx_presensi_online_verifikasi_submission` (`presensi_online_id`, `created_at`),
+  CONSTRAINT `fk_presensi_online_verifikasi_submission`
+    FOREIGN KEY (`presensi_online_id`) REFERENCES `presensi_online`(`presensi_online_id`)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_presensi_online_verifikasi_user`
+    FOREIGN KEY (`verifikator_user_id`) REFERENCES `users`(`user_id`)
+    ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `ai_recognition_jobs` (
+
+  `ai_job_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID unik job analisis AI untuk presensi online.',
+  `presensi_online_id` BIGINT UNSIGNED NOT NULL COMMENT 'Referensi pengajuan presensi online yang akan dianalisis.',
+  `lampiran_id` BIGINT UNSIGNED DEFAULT NULL COMMENT 'Lampiran spesifik yang menjadi input AI, bila analisis dilakukan per file.',
+  `task_type` ENUM('face_presence','screen_context','chat_context','multi_context') NOT NULL DEFAULT 'multi_context' COMMENT 'Jenis analisis AI yang direncanakan.',
+  `model_name` VARCHAR(100) DEFAULT NULL COMMENT 'Nama model AI lokal ringan. Contoh implementasi: ''local_context_v1''.',
+  `model_version` VARCHAR(50) DEFAULT NULL COMMENT 'Versi model AI. Contoh implementasi: ''2026.04''.',
+  `job_status` ENUM('pending_pengembangan','antri','diproses','selesai','gagal','diabaikan') NOT NULL DEFAULT 'pending_pengembangan' COMMENT 'Status job AI. Default mengikuti kondisi bahwa fitur AI masih wacana/pending.',
+  `confidence_score` DECIMAL(5,2) DEFAULT NULL COMMENT 'Nilai confidence AI bila nanti sudah aktif. Contoh implementasi: 87.50.',
+  `hasil_ringkas_json` JSON DEFAULT NULL COMMENT 'Ringkasan hasil AI dalam format JSON bila modul AI sudah berjalan.',
+  `error_message` TEXT DEFAULT NULL COMMENT 'Pesan error bila proses AI gagal.',
+  `requested_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Waktu job diminta/dicatat.',
+  `processed_at` DATETIME DEFAULT NULL COMMENT 'Waktu job selesai diproses.',
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Waktu record dibuat otomatis. Contoh implementasi: ''2026-04-09 08:15:00''.',
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Waktu record terakhir diperbarui otomatis. Contoh implementasi: ''2026-04-09 10:00:00''.',
+  PRIMARY KEY (`ai_job_id`),
+  KEY `idx_ai_recognition_jobs_status` (`job_status`, `task_type`),
+  KEY `idx_ai_recognition_jobs_submission` (`presensi_online_id`),
+  CONSTRAINT `fk_ai_recognition_jobs_submission`
+    FOREIGN KEY (`presensi_online_id`) REFERENCES `presensi_online`(`presensi_online_id`)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_ai_recognition_jobs_lampiran`
+    FOREIGN KEY (`lampiran_id`) REFERENCES `presensi_online_lampiran`(`lampiran_id`)
+    ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =========================================================
+-- 9. UJIAN
+-- =========================================================
+
+CREATE TABLE `sesi_ujian` (
+
+  `sesi_ujian_id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID unik sesi ujian.',
+  `kode_ujian` VARCHAR(20) NOT NULL COMMENT 'Kode unik sesi ujian. Contoh implementasi: ''UTS-TKJ-01''. Umumnya dibentuk backend dari jenis ujian, identitas ruangan, dan urutan sesi.',
+  `nama_ujian` VARCHAR(100) NOT NULL COMMENT 'Nama ujian. Contoh implementasi: ''UTS Semester Ganjil''.',
+  `jurusan_id` INT UNSIGNED NOT NULL COMMENT 'Referensi jurusan terkait.',
+  `ruangan_id` INT UNSIGNED NOT NULL COMMENT 'Referensi ruangan terkait.',
+  `plotting_id` INT UNSIGNED DEFAULT NULL COMMENT 'Referensi plotting rombel terkait.',
+  `tahun_ajaran` VARCHAR(9) DEFAULT NULL COMMENT 'Tahun ajaran akademik. Contoh implementasi: ''2025/2026''.',
+  `semester` ENUM('ganjil','genap','pendek') DEFAULT NULL COMMENT 'Semester akademik. Contoh implementasi: ''ganjil''.',
+  `tanggal_mulai` DATE NOT NULL COMMENT 'Tanggal mulai berlaku. Contoh implementasi: awal semester atau awal sesi.',
+  `tanggal_selesai` DATE NOT NULL COMMENT 'Tanggal selesai berlaku. Contoh implementasi: akhir semester atau akhir event.',
+  `waktu_mulai` TIME NOT NULL COMMENT 'Kolom waktu_mulai. Contoh implementasi: isi sesuai kebutuhan modul sesi_ujian.',
+  `waktu_selesai` TIME NOT NULL COMMENT 'Kolom waktu_selesai. Contoh implementasi: isi sesuai kebutuhan modul sesi_ujian.',
+  `durasi_menit` INT UNSIGNED NOT NULL DEFAULT 90 COMMENT 'Durasi ujian dalam menit. Contoh implementasi: 90.',
+  `mata_pelajaran` VARCHAR(100) DEFAULT NULL COMMENT 'Nama mata pelajaran. Contoh implementasi: ''Administrasi Sistem Jaringan''.',
+  `pengawas_id` INT UNSIGNED DEFAULT NULL COMMENT 'User pengawas ujian. Contoh implementasi: guru pengawas ruang lab.',
+  `keterangan` TEXT DEFAULT NULL COMMENT 'Keterangan tambahan. Contoh implementasi: alasan validasi, catatan scan, atau deskripsi event.',
+  `status` ENUM('draft','aktif','selesai','dibatalkan') NOT NULL DEFAULT 'draft' COMMENT 'Status data. Nilai mengikuti ENUM pada kolom ini. Contoh implementasi: ''aktif''.',
+  `created_by` INT UNSIGNED DEFAULT NULL COMMENT 'User pembuat data. Contoh implementasi: admin akademik yang membuat sesi ujian.',
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Waktu record dibuat otomatis. Contoh implementasi: ''2026-04-09 08:15:00''.',
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Waktu record terakhir diperbarui otomatis. Contoh implementasi: ''2026-04-09 10:00:00''.',
+  PRIMARY KEY (`sesi_ujian_id`),
+  UNIQUE KEY `uk_sesi_ujian_kode` (`kode_ujian`),
+  KEY `idx_sesi_ujian_lookup` (`tanggal_mulai`, `status`, `ruangan_id`),
+  CONSTRAINT `fk_sesi_ujian_jurusan`
+    FOREIGN KEY (`jurusan_id`) REFERENCES `jurusan`(`jurusan_id`)
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `fk_sesi_ujian_ruangan`
+    FOREIGN KEY (`ruangan_id`) REFERENCES `ruangan`(`ruangan_id`)
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `fk_sesi_ujian_plotting`
+    FOREIGN KEY (`plotting_id`) REFERENCES `plotting_rombel`(`plotting_id`)
+    ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `fk_sesi_ujian_pengawas`
+    FOREIGN KEY (`pengawas_id`) REFERENCES `users`(`user_id`)
+    ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `fk_sesi_ujian_created_by`
+    FOREIGN KEY (`created_by`) REFERENCES `users`(`user_id`)
+    ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `peserta_ujian` (
+
+  `peserta_ujian_id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID unik peserta ujian.',
+  `sesi_ujian_id` INT UNSIGNED NOT NULL COMMENT 'Referensi/ID unik untuk sesi ujian. Contoh implementasi: nilai numerik sesuai data master.',
+  `siswa_id` INT UNSIGNED NOT NULL COMMENT 'Referensi siswa terkait.',
+  `no_urut` INT UNSIGNED DEFAULT NULL COMMENT 'Nomor urut duduk',
+  `status_kehadiran` ENUM('hadir','tidak_hadir','izin','sakit') NOT NULL DEFAULT 'tidak_hadir' COMMENT 'Status kehadiran peserta ujian. Contoh implementasi: ''hadir'' atau ''izin''.',
+  `waktu_hadir` DATETIME DEFAULT NULL COMMENT 'Waktu hadir peserta ujian. Contoh implementasi: ''2026-05-10 07:10:00''.',
+  `nilai` DECIMAL(5,2) DEFAULT NULL COMMENT 'Nilai konfigurasi. Contoh implementasi: ''15'' atau JSON pengaturan.',
+  `keterangan` TEXT DEFAULT NULL COMMENT 'Keterangan tambahan. Contoh implementasi: alasan validasi, catatan scan, atau deskripsi event.',
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Waktu record dibuat otomatis. Contoh implementasi: ''2026-04-09 08:15:00''.',
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Waktu record terakhir diperbarui otomatis. Contoh implementasi: ''2026-04-09 10:00:00''.',
+  PRIMARY KEY (`peserta_ujian_id`),
+  UNIQUE KEY `uk_peserta_ujian_unique` (`sesi_ujian_id`, `siswa_id`),
+  KEY `idx_peserta_ujian_lookup` (`sesi_ujian_id`, `status_kehadiran`, `no_urut`),
+  CONSTRAINT `fk_peserta_ujian_sesi`
+    FOREIGN KEY (`sesi_ujian_id`) REFERENCES `sesi_ujian`(`sesi_ujian_id`)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_peserta_ujian_siswa`
+    FOREIGN KEY (`siswa_id`) REFERENCES `siswa`(`siswa_id`)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =========================================================
+-- 10. KONFIGURASI, LOG, NOTIFIKASI, KALENDER
 -- =========================================================
 
 CREATE TABLE `konfigurasi` (
@@ -1094,6 +1291,19 @@ CREATE TABLE `notifikasi_admin` (
     ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE `kalender_akademik` (
+
+  `kalender_id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID unik kalender akademik.',
+  `tanggal` DATE NOT NULL COMMENT 'Tanggal kejadian/transaksi. Contoh implementasi: ''2026-07-15''.',
+  `tanggal_selesai` DATE DEFAULT NULL COMMENT 'Tanggal selesai berlaku. Contoh implementasi: akhir semester atau akhir event.',
+  `keterangan` VARCHAR(100) NOT NULL COMMENT 'Keterangan tambahan. Contoh implementasi: alasan validasi, catatan scan, atau deskripsi event.',
+  `tipe` ENUM('libur_nasional','libur_sekolah','event_khusus') NOT NULL DEFAULT 'libur_sekolah' COMMENT 'Jenis item kalender. Contoh implementasi: ''libur_nasional''.',
+  `status` ENUM('aktif','nonaktif') NOT NULL DEFAULT 'aktif' COMMENT 'Status data. Nilai mengikuti ENUM pada kolom ini. Contoh implementasi: ''aktif''.',
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Waktu record dibuat otomatis. Contoh implementasi: ''2026-04-09 08:15:00''.',
+  PRIMARY KEY (`kalender_id`),
+  KEY `idx_kalender_akademik_tanggal` (`tanggal`, `tipe`, `status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- =========================================================
 -- 11. BUFFER VIEW TABLE
 -- =========================================================
@@ -1145,6 +1355,80 @@ CREATE TABLE `jurusan_ruangan_buffer` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 -- memilih jenis ruangan saja
 -- nama ruangan auto generate dari jenis_ruangan, jurusan, dan auto increment
+
+
+-- =========================================================
+-- BUFFER SNAPSHOT PRESENSI (NONAKTIF / PENGEMBANGAN LANJUT)
+-- Tabel ini disiapkan bila nanti snapshot langsung di tabel `presensi`
+-- ingin dipusatkan agar penulisan lebih hemat dan konsisten.
+-- Untuk tahap sekarang sengaja masih di-comment.
+-- =========================================================
+
+-- CREATE TABLE `presensi_snapshot_buffer` (
+--
+--   `snapshot_buffer_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+--   `plotting_id` INT UNSIGNED DEFAULT NULL COMMENT 'Referensi plotting jika context berasal dari plotting reguler.',
+--   `ruangan_id` INT UNSIGNED DEFAULT NULL COMMENT 'Referensi ruangan context.',
+--   `jurusan_id` INT UNSIGNED DEFAULT NULL COMMENT 'Referensi jurusan context bila tersedia.',
+--   `jurusan_snapshot` VARCHAR(100) DEFAULT NULL COMMENT 'Nama jurusan hasil snapshot/buffer.',
+--   `kelas_snapshot` VARCHAR(20) DEFAULT NULL COMMENT 'Kelas hasil snapshot/buffer.',
+--   `rombel_snapshot` VARCHAR(30) DEFAULT NULL COMMENT 'Rombel hasil snapshot/buffer.',
+--   `tahun_ajaran_snapshot` VARCHAR(9) DEFAULT NULL COMMENT 'Tahun ajaran hasil snapshot/buffer.',
+--   `semester_snapshot` ENUM('ganjil','genap','pendek') DEFAULT NULL COMMENT 'Semester hasil snapshot/buffer.',
+--   `sumber_context` ENUM('plotting','manual','sinkron_online','custom_event') NOT NULL DEFAULT 'plotting',
+--   `signature_hash` CHAR(64) DEFAULT NULL COMMENT 'Hash kombinasi context agar snapshot identik bisa dipakai ulang.',
+--   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+--   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+--
+--   PRIMARY KEY (`snapshot_buffer_id`),
+--   UNIQUE KEY `uk_presensi_snapshot_signature` (`signature_hash`),
+--   KEY `idx_presensi_snapshot_lookup` (`plotting_id`,`ruangan_id`,`tahun_ajaran_snapshot`,`semester_snapshot`),
+--
+--   CONSTRAINT `fk_presensi_snapshot_plotting`
+--     FOREIGN KEY (`plotting_id`) REFERENCES `plotting_rombel`(`plotting_id`)
+--     ON DELETE SET NULL ON UPDATE CASCADE,
+--
+--   CONSTRAINT `fk_presensi_snapshot_ruangan`
+--     FOREIGN KEY (`ruangan_id`) REFERENCES `ruangan`(`ruangan_id`)
+--     ON DELETE SET NULL ON UPDATE CASCADE,
+--
+--   CONSTRAINT `fk_presensi_snapshot_jurusan`
+--     FOREIGN KEY (`jurusan_id`) REFERENCES `jurusan`(`jurusan_id`)
+--     ON DELETE SET NULL ON UPDATE CASCADE
+--
+-- ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- =========================================================
+-- MIGRASI BERTAHAP JIKA BUFFER SNAPSHOT DIAKTIFKAN (NONAKTIF)
+-- Kolom snapshot lama tetap dipertahankan sebagai fallback selama masa transisi.
+-- Jangan langsung drop kolom snapshot lama.
+-- =========================================================
+
+-- ALTER TABLE `presensi`
+--   ADD COLUMN `snapshot_buffer_id` BIGINT UNSIGNED DEFAULT NULL AFTER `jadwal_id`,
+--   MODIFY `jurusan_snapshot` VARCHAR(50) DEFAULT NULL COMMENT 'Fallback historis bila buffer belum dipakai atau data manual.',
+--   MODIFY `kelas_snapshot` VARCHAR(20) DEFAULT NULL COMMENT 'Fallback historis bila buffer belum dipakai atau data manual.',
+--   MODIFY `rombel_snapshot` VARCHAR(20) DEFAULT NULL COMMENT 'Fallback historis bila buffer belum dipakai atau data manual.',
+--   ADD KEY `idx_presensi_snapshot_buffer` (`snapshot_buffer_id`),
+--   ADD CONSTRAINT `fk_presensi_snapshot_buffer`
+--     FOREIGN KEY (`snapshot_buffer_id`) REFERENCES `presensi_snapshot_buffer`(`snapshot_buffer_id`)
+--     ON DELETE SET NULL ON UPDATE CASCADE;
+
+
+-- =========================================================
+-- CATATAN REDUNDANSI TERKENDALI (DOKUMENTASI DESAIN)
+-- 1) siswa.jurusan_id_aktif, siswa.rombel_id_aktif, dan siswa.kelas_aktif
+--    adalah cache untuk filter/sorting cepat; sumber historis tetap penempatan_siswa_rombel.
+-- 2) profil_siswa.rombel adalah field legacy paling redundan dan dapat dinonaktifkan bertahap
+--    setelah seluruh UI/ekspor memakai relasi utama.
+-- 3) pasangan path file + media_id pada log_scan_qr/presensi sengaja dipertahankan:
+--    path untuk akses cepat/kompatibilitas lama, media_id untuk audit dan arsip.
+-- 4) presensi_online menyimpan snapshot keputusan terakhir, sedangkan histori review detail
+--    tetap dicatat di presensi_online_verifikasi.
+-- 5) jurusan_dashboard_buffer dan jurusan_ruangan_buffer adalah tabel buffer/cache laporan,
+--    bukan source of truth utama.
+-- =========================================================
 
 -- =========================================================
 -- 12. SEED DATA MINIMAL IAM
@@ -1768,6 +2052,79 @@ LEFT JOIN `user_activity_cold_archives` uca ON uca.cold_archive_id = ua.cold_arc
 -- =========================================================
 
 SET FOREIGN_KEY_CHECKS = 0;
+
+-- =========================================================
+-- 1. MASTER MATA PELAJARAN / MAPEL
+-- =========================================================
+CREATE TABLE IF NOT EXISTS `mata_pelajaran` (
+  `mapel_id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID unik mata pelajaran.',
+  `kode_mapel` VARCHAR(20) NOT NULL COMMENT 'Kode mapel. Contoh: PAI, MTK, BIN, TKJ-PRAK.',
+  `nama_mapel` VARCHAR(100) NOT NULL COMMENT 'Nama mata pelajaran.',
+  `kelompok_mapel` ENUM('umum','kejuruan','muatan_lokal','lainnya') NOT NULL DEFAULT 'umum' COMMENT 'Kelompok mapel untuk filter UI.',
+  `status` ENUM('aktif','nonaktif') NOT NULL DEFAULT 'aktif',
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`mapel_id`),
+  UNIQUE KEY `uk_mata_pelajaran_kode` (`kode_mapel`),
+  KEY `idx_mata_pelajaran_status` (`status`, `kelompok_mapel`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =========================================================
+-- 2. NILAI AKADEMIK SISWA
+--    Disiapkan sebagai potensi pengembangan tampilan nilai siswa.
+--    Scope masih minimal: cukup untuk riwayat nilai per mapel/semester.
+-- =========================================================
+CREATE TABLE IF NOT EXISTS `nilai_akademik` (
+  `nilai_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID unik nilai akademik.',
+  `siswa_id` INT UNSIGNED NOT NULL COMMENT 'Referensi siswa.',
+  `mapel_id` INT UNSIGNED NOT NULL COMMENT 'Referensi mata pelajaran.',
+  `guru_id` INT UNSIGNED DEFAULT NULL COMMENT 'Guru pengampu/penginput nilai.',
+  `tahun_ajaran` VARCHAR(9) NOT NULL COMMENT 'Contoh: 2025/2026.',
+  `semester` ENUM('ganjil','genap','pendek') NOT NULL DEFAULT 'ganjil',
+  `jenis_penilaian` ENUM('tugas','kuis','praktik','uts','uas','akhir','lainnya') NOT NULL DEFAULT 'akhir',
+  `nilai` DECIMAL(5,2) NOT NULL COMMENT 'Nilai numerik 0-100.',
+  `bobot` DECIMAL(5,2) DEFAULT NULL COMMENT 'Bobot nilai bila diperlukan.',
+  `predikat` VARCHAR(5) DEFAULT NULL COMMENT 'Predikat opsional. Contoh: A, B, C.',
+  `keterangan` VARCHAR(255) DEFAULT NULL COMMENT 'Catatan nilai.',
+  `tanggal_input` DATE DEFAULT NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`nilai_id`),
+  KEY `idx_nilai_siswa_periode` (`siswa_id`, `tahun_ajaran`, `semester`),
+  KEY `idx_nilai_mapel_periode` (`mapel_id`, `tahun_ajaran`, `semester`),
+  KEY `idx_nilai_jenis` (`jenis_penilaian`),
+  CONSTRAINT `fk_nilai_siswa`
+    FOREIGN KEY (`siswa_id`) REFERENCES `siswa`(`siswa_id`)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_nilai_mapel`
+    FOREIGN KEY (`mapel_id`) REFERENCES `mata_pelajaran`(`mapel_id`)
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `fk_nilai_guru`
+    FOREIGN KEY (`guru_id`) REFERENCES `guru_staff`(`guru_id`)
+    ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `chk_nilai_range` CHECK (`nilai` >= 0 AND `nilai` <= 100)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =========================================================
+-- 3. PREFERENSI UI USER
+--    Mendukung mode gelap/terang lintas perangkat.
+--    Kalau frontend memilih localStorage saja, tabel ini tetap aman dibiarkan.
+-- =========================================================
+CREATE TABLE IF NOT EXISTS `user_ui_preferences` (
+  `preference_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `user_id` INT UNSIGNED NOT NULL,
+  `theme_mode` ENUM('light','dark','system') NOT NULL DEFAULT 'system',
+  `sidebar_collapsed` TINYINT(1) NOT NULL DEFAULT 0,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`preference_id`),
+  UNIQUE KEY `uk_user_ui_preferences_user` (`user_id`),
+  CONSTRAINT `fk_user_ui_preferences_user`
+    FOREIGN KEY (`user_id`) REFERENCES `users`(`user_id`)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+SET FOREIGN_KEY_CHECKS = 1;
 
 -- =========================================================
 -- 4. VIEW ADMIN: DATA SISWA
@@ -3632,6 +3989,18 @@ SET FOREIGN_KEY_CHECKS = 1;
 
 -- =========================================================
 -- END PATCH DB 3.7
+-- =========================================================
+
+
+-- =========================================================
+-- DB 3.8 MIGRATION PATCH
+-- Upgrade from prototype-db-3.7.sql to prototype-db-3.8.sql
+-- Focus:
+-- 1) Data mitra minimal: NO, NISN, NAMA, KELAS.
+-- 2) Rombel tanpa inkremen di UI: 10 AKL tetap tampil 10 AKL.
+-- 3) nomor_rombel=1 hanya dipakai internal ketika hanya ada satu rombel.
+-- 4) Ruangan fisik fleksibel dan tidak menjadi syarat presensi MVP.
+-- 5) Presensi QR web berbasis scanner_session + siswa.
 -- =========================================================
 
 -- =========================================================
