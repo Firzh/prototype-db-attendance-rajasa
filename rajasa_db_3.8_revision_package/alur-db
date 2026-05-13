@@ -1,2 +1,5 @@
 alur presensi siswa:
-- guru / staff login ke website dengan akun mereka (
+- guru / staff login ke website dengan akun mereka
+- guru masuk ke halaman presensi 
+- guru / staff bisa presensi sesuai rombel / piket (biasanya guru ada waktunya piket bergilir untuk presensi siswa yang terlambat). Siswa yang terlambat berasal dari berbagai rombel, dan angkatan (10,11,12)
+- 
