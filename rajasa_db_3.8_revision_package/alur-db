@@ -2,4 +2,6 @@ alur presensi siswa:
 - guru / staff login ke website dengan akun mereka
 - guru masuk ke halaman presensi 
 - guru / staff bisa presensi sesuai rombel / piket (biasanya guru ada waktunya piket bergilir untuk presensi siswa yang terlambat). Siswa yang terlambat berasal dari berbagai rombel, dan angkatan (10,11,12)
-- 
+-- siswa dengan status alpha (belum presensi) akan ada di urutan teratas saat pada halaman presensi (guru / staff bisa cek ulang)
+-- siswa yang usil menggunakan kartu pelajar siswa dari kelas lain saat presensi kelas akan berstatus warning dan muncul di bawah dari siswa dengan status alpha
+-- guru / staff harus memperhatikan pemilihan presensi, apakah rombel (kelas) atau piket
