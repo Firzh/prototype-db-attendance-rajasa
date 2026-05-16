@@ -16,6 +16,8 @@ alur presensi siswa:
 - scan qr berupa https post dengan mengakses kamera hp guru; ada mekanisme anti presensi ganda di backend
 - bagian scan qr ada 2 tombol di bawah; membelah di tengah. 1 untuk pause scan; 1 untuk selesai scan
 - pause scan menghentikan scan sementara; memunculkan popup berisi konfirmasi untuk melanjutkan scan
-- jika ada kartu pelajar rombel/kelas lain yang ikut terscan bukan pada rombel/kelas nya (siswa usil). maka nama data kartu akan masuk sebagai flagged dan menerima status warning. menampilkan data pada halaman presensi seperti yang sudah dijelaskan di atas 
-- jika ada kartu pelajar rombel/kelas lain yang ikut terscan bukan pada rombel/kelas nya (siswa usil). maka akan muncul popup yang menampilkan data dalam kartu yang tidak sesuai; scan akan terhenti sampai pop up dikonfirmasi (ada tombol konfirmasi)
-- jika ada kartu pelajar rombel/kelas lain yang ikut terscan bukan pada rombel/kelas nya (siswa usil). maka guru harus mencatat nama siswa secara manual karena ia memakai kartu milik teman nya. Juga bisa sebagai catatan disipliner
+
+- jika ada kartu pelajar rombel/kelas lain yang ikut terscan bukan pada rombel/kelas nya (siswa usil), maka: 
+-- nama data kartu akan masuk sebagai flagged dan menerima status warning. menampilkan data pada halaman presensi seperti yang sudah dijelaskan sebelumnya
+-- akan muncul popup yang menampilkan data dalam kartu yang tidak sesuai; scan akan terhenti sampai pop up dikonfirmasi (ada tombol konfirmasi)
+-- guru harus mencatat nama siswa secara manual karena ia memakai kartu milik teman nya. Juga bisa sebagai catatan disipliner
