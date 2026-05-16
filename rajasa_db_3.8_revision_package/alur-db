@@ -21,3 +21,5 @@ alur presensi siswa:
 -- nama data kartu akan masuk sebagai flagged dan menerima status warning. menampilkan data pada halaman presensi seperti yang sudah dijelaskan sebelumnya
 -- akan muncul popup yang menampilkan data dalam kartu yang tidak sesuai; scan akan terhenti sampai pop up dikonfirmasi (ada tombol konfirmasi)
 -- guru harus mencatat nama siswa secara manual karena ia memakai kartu milik teman nya. Juga bisa sebagai catatan disipliner
+
+- jika scan sudah selesai, guru wajib menekan tombol selesai
