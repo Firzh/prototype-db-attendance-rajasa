@@ -137,6 +137,8 @@ CREATE TABLE `rombel` (
   UNIQUE KEY `uk_rombel_periode` (`tahun_ajaran_id`, `tingkatan`, `jurusan_id`, `nomor_rombel`),
   KEY `idx_rombel_status` (`status`),
   KEY `idx_rombel_display` (`status`, `tingkat_angka`, `label_rombel`),
+  CONSTRAINT `chk_rombel_tahun_ajaran_required`
+    CHECK (`tahun_ajaran_id` IS NOT NULL),
   CONSTRAINT `fk_rombel_tahun_ajaran`
     FOREIGN KEY (`tahun_ajaran_id`) REFERENCES `tahun_ajaran`(`tahun_ajaran_id`)
     ON DELETE RESTRICT ON UPDATE CASCADE,
@@ -155,8 +157,10 @@ FOR EACH ROW
 BEGIN
   DECLARE v_tahun_awal INT;
   DECLARE v_nama_tahun_ajaran VARCHAR(9);
+  DECLARE v_tahun_ajaran_id INT UNSIGNED DEFAULT NULL;
 
   IF NEW.`tahun_ajaran_id` IS NULL THEN
+
     IF MONTH(CURDATE()) >= 7 THEN
       SET v_tahun_awal = YEAR(CURDATE());
     ELSE
@@ -166,15 +170,18 @@ BEGIN
     SET v_nama_tahun_ajaran = CONCAT(v_tahun_awal, '/', v_tahun_awal + 1);
 
     SELECT `tahun_ajaran_id`
-    INTO NEW.`tahun_ajaran_id`
+    INTO v_tahun_ajaran_id
     FROM `tahun_ajaran`
     WHERE `nama_tahun_ajaran` = v_nama_tahun_ajaran
     LIMIT 1;
-  END IF;
 
-  IF NEW.`tahun_ajaran_id` IS NULL THEN
-    SIGNAL SQLSTATE '45000'
-    SET MESSAGE_TEXT = 'Tahun ajaran otomatis belum tersedia di tabel tahun_ajaran';
+    IF v_tahun_ajaran_id IS NULL THEN
+      SIGNAL SQLSTATE '45000'
+      SET MESSAGE_TEXT = 'Tahun ajaran otomatis belum tersedia di tabel tahun_ajaran';
+    END IF;
+
+    SET NEW.`tahun_ajaran_id` = v_tahun_ajaran_id;
+
   END IF;
 END$$
 
@@ -267,7 +274,7 @@ CREATE TABLE `penempatan_siswa_rombel` (
   `penempatan_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `siswa_id` INT UNSIGNED NOT NULL,
   `rombel_id` INT UNSIGNED NOT NULL,
-  `tahun_ajaran_id` INT UNSIGNED DEFAULT NULL,
+  `tahun_ajaran_id` INT UNSIGNED NOT NULL,
   `semester` ENUM('ganjil','genap','pendek') NOT NULL DEFAULT 'ganjil',
   `tanggal_mulai` DATE DEFAULT NULL,
   `tanggal_selesai` DATE DEFAULT NULL,
@@ -294,7 +301,7 @@ CREATE TABLE `penempatan_siswa_rombel` (
     ON DELETE RESTRICT ON UPDATE CASCADE,
   CONSTRAINT `fk_penempatan_tahun_ajaran`
     FOREIGN KEY (`tahun_ajaran_id`) REFERENCES `tahun_ajaran`(`tahun_ajaran_id`)
-    ON DELETE SET NULL ON UPDATE CASCADE
+    ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `users` (
@@ -395,7 +402,7 @@ CREATE TABLE `rombel_wali_kelas` (
   `wali_kelas_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `rombel_id` INT UNSIGNED NOT NULL,
   `guru_id` INT UNSIGNED NOT NULL,
-  `tahun_ajaran_id` INT UNSIGNED DEFAULT NULL,
+  `tahun_ajaran_id` INT UNSIGNED NOT NULL,
   `semester` ENUM('ganjil','genap','pendek') NOT NULL DEFAULT 'ganjil',
   `tanggal_mulai` DATE DEFAULT NULL,
   `tanggal_selesai` DATE DEFAULT NULL,
@@ -421,7 +428,7 @@ CREATE TABLE `rombel_wali_kelas` (
     ON DELETE RESTRICT ON UPDATE CASCADE,
   CONSTRAINT `fk_wali_kelas_tahun_ajaran`
     FOREIGN KEY (`tahun_ajaran_id`) REFERENCES `tahun_ajaran`(`tahun_ajaran_id`)
-    ON DELETE SET NULL ON UPDATE CASCADE
+    ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =========================================================
@@ -440,7 +447,6 @@ CREATE TABLE `siswa_qr` (
   PRIMARY KEY (`siswa_qr_id`),
   UNIQUE KEY `uk_siswa_qr_payload` (`payload_normalized`),
   UNIQUE KEY `uk_siswa_qr_siswa` (`siswa_id`),
-  UNIQUE KEY `uk_siswa_qr_payload` (`payload_normalized`),
   UNIQUE KEY `uk_siswa_qr_nisn` (`payload_nisn`),
   CONSTRAINT `fk_siswa_qr_siswa`
     FOREIGN KEY (`siswa_id`) REFERENCES `siswa`(`siswa_id`)
@@ -473,8 +479,8 @@ CREATE TABLE `presensi_sesi` (
   `session_uuid` CHAR(36) NOT NULL,
   `mode_presensi` ENUM('rombel','piket') NOT NULL,
   `rombel_id` INT UNSIGNED DEFAULT NULL COMMENT 'Wajib untuk mode rombel. Kosong untuk mode piket.',
-  `tahun_ajaran_id` INT UNSIGNED DEFAULT NULL,
-  `semester` ENUM('ganjil','genap','pendek') DEFAULT NULL,
+  `tahun_ajaran_id` INT UNSIGNED NOT NULL,
+  `semester` ENUM('ganjil','genap','pendek') NOT NULL DEFAULT 'ganjil',
   `tanggal` DATE NOT NULL,
   `status` ENUM('aktif','suspended','selesai','gagal','expired','terputus') NOT NULL DEFAULT 'aktif',
   `opened_by_user_id` INT UNSIGNED NOT NULL,
@@ -497,10 +503,10 @@ CREATE TABLE `presensi_sesi` (
   KEY `idx_presensi_sesi_tahun` (`tahun_ajaran_id`, `semester`),
   CONSTRAINT `fk_presensi_sesi_rombel`
     FOREIGN KEY (`rombel_id`) REFERENCES `rombel`(`rombel_id`)
-    ON DELETE SET NULL ON UPDATE CASCADE,
+    ON DELETE RESTRICT ON UPDATE CASCADE,
   CONSTRAINT `fk_presensi_sesi_tahun_ajaran`
     FOREIGN KEY (`tahun_ajaran_id`) REFERENCES `tahun_ajaran`(`tahun_ajaran_id`)
-    ON DELETE SET NULL ON UPDATE CASCADE,
+    ON DELETE RESTRICT ON UPDATE CASCADE,
   CONSTRAINT `fk_presensi_sesi_opened_by`
     FOREIGN KEY (`opened_by_user_id`) REFERENCES `users`(`user_id`)
     ON DELETE RESTRICT ON UPDATE CASCADE,
@@ -666,7 +672,7 @@ CREATE TABLE `import_jobs` (
   `import_code` CHAR(36) NOT NULL,
   `import_type` ENUM('siswa','guru_staff','rombel','wali_kelas','lainnya') NOT NULL DEFAULT 'siswa',
   `original_filename` VARCHAR(255) DEFAULT NULL,
-  `tahun_ajaran_id` INT UNSIGNED DEFAULT NULL,
+  `tahun_ajaran_id` INT UNSIGNED NOT NULL,
   `semester` ENUM('ganjil','genap','pendek') DEFAULT NULL,
   `status` ENUM('draft','diproses','selesai','gagal','dibatalkan') NOT NULL DEFAULT 'draft',
   `total_rows` INT UNSIGNED NOT NULL DEFAULT 0,
@@ -690,7 +696,7 @@ CREATE TABLE `import_jobs` (
     ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `fk_import_jobs_tahun_ajaran`
     FOREIGN KEY (`tahun_ajaran_id`) REFERENCES `tahun_ajaran`(`tahun_ajaran_id`)
-    ON DELETE SET NULL ON UPDATE CASCADE
+    ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `import_column_mappings` (
@@ -933,6 +939,8 @@ SELECT
   l.`catatan_siswa_pembawa_kartu`,
   l.`resolved_at`
 FROM `presensi_scan_log` l
+JOIN `presensi_sesi` ps
+  ON ps.`presensi_sesi_id` = l.`presensi_sesi_id`
 JOIN `siswa` s
   ON s.`siswa_id` = l.`siswa_id`
 LEFT JOIN `rombel` rs
@@ -941,6 +949,8 @@ LEFT JOIN `rombel` ra
   ON ra.`rombel_id` = l.`actual_rombel_id`
 JOIN `rombel_wali_kelas` rwk
   ON rwk.`rombel_id` = l.`actual_rombel_id`
+ AND rwk.`tahun_ajaran_id` = ps.`tahun_ajaran_id`
+ AND rwk.`semester` = ps.`semester`
  AND rwk.`status` = 'aktif'
 JOIN `users` u
   ON u.`guru_id` = rwk.`guru_id`
@@ -1026,108 +1036,6 @@ GROUP BY
   u.`username`,
   ps.`started_at`,
   ps.`ended_at`;
-
--- =========================================================
--- 7. SEED DATA DASAR
--- =========================================================
-
-INSERT INTO `roles` (`nama_role`, `role_slug`, `deskripsi`, `level_rank`, `is_system`) VALUES
-  ('Super Admin', 'super_admin', 'Akses tertinggi sistem.', 100, 1),
-  ('Admin', 'admin', 'Mengelola data utama dan koreksi presensi.', 80, 1),
-  ('Guru', 'guru', 'Melakukan presensi rombel dan melihat laporan terkait.', 30, 1),
-  ('Staff', 'staff', 'Melakukan presensi piket dan melihat laporan terkait.', 30, 1),
-  ('Intern Presensi', 'intern_presensi', 'Akses khusus presensi sesuai izin yang diberikan.', 20, 1),
-  ('Siswa', 'siswa', 'Melihat hasil presensi milik sendiri.', 10, 1)
-ON DUPLICATE KEY UPDATE
-  `deskripsi` = VALUES(`deskripsi`),
-  `level_rank` = VALUES(`level_rank`),
-  `is_system` = VALUES(`is_system`);
-
-INSERT INTO `permissions` (`perm_slug`, `module_name`, `action_name`, `keterangan`) VALUES
-  ('attendance.read', 'attendance', 'read', 'Melihat data presensi.'),
-  ('attendance.scan', 'attendance', 'scan', 'Melakukan scan QR presensi.'),
-  ('attendance.scan.rombel', 'attendance', 'scan', 'Melakukan presensi mode rombel.'),
-  ('attendance.scan.piket', 'attendance', 'scan', 'Melakukan presensi mode piket atau terlambat.'),
-  ('attendance.edit', 'attendance', 'edit', 'Mengubah data presensi.'),
-  ('attendance.export', 'attendance', 'export', 'Mengekspor laporan presensi.'),
-  ('attendance.warning.read', 'attendance', 'read', 'Melihat log warning presensi.'),
-  ('attendance.warning.resolve', 'attendance', 'validate', 'Menyelesaikan log warning presensi.'),
-  ('attendance.student.view', 'attendance', 'read', 'Siswa melihat hasil presensi milik sendiri.'),
-  ('academic.read', 'academic', 'read', 'Melihat data akademik.'),
-  ('academic.manage', 'academic', 'manage', 'Mengelola data akademik.'),
-  ('users.manage', 'users', 'manage', 'Mengelola akun dan hak akses.'),
-  ('reports.read', 'reports', 'read', 'Melihat laporan.'),
-  ('reports.export', 'reports', 'export', 'Mengekspor laporan.'),
-  ('import.manage', 'import', 'manage', 'Mengelola import data.'),
-  ('notifications.read', 'notifications', 'read', 'Melihat notifikasi.'),
-  ('notifications.manage', 'notifications', 'manage', 'Mengelola notifikasi.')
-ON DUPLICATE KEY UPDATE
-  `module_name` = VALUES(`module_name`),
-  `action_name` = VALUES(`action_name`),
-  `keterangan` = VALUES(`keterangan`);
-
-INSERT IGNORE INTO `role_permissions` (`role_id`, `perm_id`, `is_allowed`, `resource_scope`)
-SELECT r.`role_id`, p.`perm_id`, 1, '*'
-FROM `roles` r
-JOIN `permissions` p
-WHERE r.`role_slug` IN ('super_admin','admin')
-  AND p.`perm_slug` IN (
-    'attendance.read','attendance.scan','attendance.scan.rombel','attendance.scan.piket','attendance.edit','attendance.export',
-    'attendance.warning.read','attendance.warning.resolve','attendance.student.view','academic.read','academic.manage',
-    'users.manage','reports.read','reports.export','import.manage','notifications.read','notifications.manage'
-  );
-
-INSERT IGNORE INTO `role_permissions` (`role_id`, `perm_id`, `is_allowed`, `resource_scope`)
-SELECT r.`role_id`, p.`perm_id`, 1, '*'
-FROM `roles` r
-JOIN `permissions` p
-WHERE r.`role_slug` IN ('guru','staff')
-  AND p.`perm_slug` IN (
-    'attendance.read','attendance.scan','attendance.scan.rombel','attendance.scan.piket',
-    'attendance.edit','attendance.export','attendance.warning.read','attendance.warning.resolve',
-    'reports.read','reports.export','notifications.read'
-  );
-
-INSERT IGNORE INTO `role_permissions` (`role_id`, `perm_id`, `is_allowed`, `resource_scope`)
-SELECT r.`role_id`, p.`perm_id`, 1, '*'
-FROM `roles` r
-JOIN `permissions` p
-WHERE r.`role_slug` = 'intern_presensi'
-  AND p.`perm_slug` IN ('attendance.read','attendance.scan','attendance.scan.rombel','attendance.scan.piket','notifications.read');
-
-INSERT IGNORE INTO `role_permissions` (`role_id`, `perm_id`, `is_allowed`, `resource_scope`)
-SELECT r.`role_id`, p.`perm_id`, 1, 'self/*'
-FROM `roles` r
-JOIN `permissions` p
-WHERE r.`role_slug` = 'siswa'
-  AND p.`perm_slug` IN ('attendance.student.view','notifications.read');
-
-INSERT INTO `jam_pembelajaran` (`jam_ke`, `label_jam`, `tipe_hari`, `status`) VALUES
-  (1, 'Jam ke-1', 'normal', 'aktif'),
-  (2, 'Jam ke-2', 'normal', 'aktif'),
-  (3, 'Jam ke-3', 'normal', 'aktif'),
-  (4, 'Jam ke-4', 'normal', 'aktif'),
-  (5, 'Jam ke-5', 'normal', 'aktif'),
-  (6, 'Jam ke-6', 'normal', 'aktif'),
-  (7, 'Jam ke-7', 'normal', 'aktif'),
-  (8, 'Jam ke-8', 'normal', 'aktif')
-ON DUPLICATE KEY UPDATE
-  `label_jam` = VALUES(`label_jam`),
-  `status` = VALUES(`status`);
-
-INSERT INTO `konfigurasi` (`kunci`, `nilai`, `tipe_nilai`, `keterangan`) VALUES
-  ('db.prototype_version', '3.9-clean', 'string', 'Versi prototype database aktif.'),
-  ('attendance.scan.max_selected_jam', '3', 'number', 'Batas maksimal jam pembelajaran dalam satu sesi rombel.'),
-  ('attendance.scan.require_sequential_jam', 'true', 'boolean', 'Pilihan jam pembelajaran harus berurutan.'),
-  ('attendance.scan.session_timeout_minutes', '20', 'number', 'Batas sesi aktif sebelum ditandai expired. Status suspended menghentikan timer di sisi aplikasi.'),
-  ('attendance.scan.pause_on_warning', 'true', 'boolean', 'Scan berhenti sementara saat QR tidak sesuai rombel.'),
-  ('attendance.scan.success_banner_ms', '1500', 'number', 'Durasi banner Presensi Berhasil pada halaman scan.'),
-  ('attendance.piket.default_jam_ke', '1', 'number', 'Default jam untuk mode piket atau terlambat.'),
-  ('notification.warning.popup_seconds', '10', 'number', 'Durasi popup wali kelas saat ada warning presensi.')
-ON DUPLICATE KEY UPDATE
-  `nilai` = VALUES(`nilai`),
-  `tipe_nilai` = VALUES(`tipe_nilai`),
-  `keterangan` = VALUES(`keterangan`);
 
 SET FOREIGN_KEY_CHECKS = 1;
 
