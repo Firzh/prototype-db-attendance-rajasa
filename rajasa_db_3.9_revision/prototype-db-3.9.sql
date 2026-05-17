@@ -147,6 +147,39 @@ CREATE TABLE `rombel` (
     CHECK (`tingkat_angka` IS NULL OR `tingkat_angka` IN (10,11,12,13))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+DELIMITER $$
+
+CREATE TRIGGER `trg_rombel_set_tahun_ajaran_before_insert`
+BEFORE INSERT ON `rombel`
+FOR EACH ROW
+BEGIN
+  DECLARE v_tahun_awal INT;
+  DECLARE v_nama_tahun_ajaran VARCHAR(9);
+
+  IF NEW.`tahun_ajaran_id` IS NULL THEN
+    IF MONTH(CURDATE()) >= 7 THEN
+      SET v_tahun_awal = YEAR(CURDATE());
+    ELSE
+      SET v_tahun_awal = YEAR(CURDATE()) - 1;
+    END IF;
+
+    SET v_nama_tahun_ajaran = CONCAT(v_tahun_awal, '/', v_tahun_awal + 1);
+
+    SELECT `tahun_ajaran_id`
+    INTO NEW.`tahun_ajaran_id`
+    FROM `tahun_ajaran`
+    WHERE `nama_tahun_ajaran` = v_nama_tahun_ajaran
+    LIMIT 1;
+  END IF;
+
+  IF NEW.`tahun_ajaran_id` IS NULL THEN
+    SIGNAL SQLSTATE '45000'
+    SET MESSAGE_TEXT = 'Tahun ajaran otomatis belum tersedia di tabel tahun_ajaran';
+  END IF;
+END$$
+
+DELIMITER ;
+
 CREATE TABLE `guru_staff` (
   `guru_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `nip` VARCHAR(30) DEFAULT NULL,
@@ -239,9 +272,17 @@ CREATE TABLE `penempatan_siswa_rombel` (
   `tanggal_mulai` DATE DEFAULT NULL,
   `tanggal_selesai` DATE DEFAULT NULL,
   `is_aktif` TINYINT(1) NOT NULL DEFAULT 1,
+  `aktif_siswa_id` INT UNSIGNED
+    GENERATED ALWAYS AS (
+      CASE 
+        WHEN `is_aktif` = 1 THEN `siswa_id`
+        ELSE NULL
+      END
+    ) STORED,
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`penempatan_id`),
+  UNIQUE KEY `uk_siswa_satu_rombel_aktif` (`aktif_siswa_id`, `tahun_ajaran_id`, `semester`),
   KEY `idx_penempatan_siswa_aktif` (`siswa_id`, `is_aktif`),
   KEY `idx_penempatan_rombel_aktif` (`rombel_id`, `is_aktif`),
   KEY `idx_penempatan_tahun` (`tahun_ajaran_id`, `semester`),
@@ -359,10 +400,18 @@ CREATE TABLE `rombel_wali_kelas` (
   `tanggal_mulai` DATE DEFAULT NULL,
   `tanggal_selesai` DATE DEFAULT NULL,
   `status` ENUM('aktif','nonaktif') NOT NULL DEFAULT 'aktif',
+  `aktif_rombel_id` INT UNSIGNED
+    GENERATED ALWAYS AS (
+      CASE 
+        WHEN `status` = 'aktif' THEN `rombel_id`
+        ELSE NULL
+      END
+    ) STORED,
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`wali_kelas_id`),
   UNIQUE KEY `uk_rombel_wali_kelas_aktif` (`rombel_id`, `guru_id`, `tahun_ajaran_id`, `semester`),
+  UNIQUE KEY `uk_rombel_satu_wali_aktif` (`aktif_rombel_id`, `tahun_ajaran_id`, `semester`),
   KEY `idx_wali_kelas_guru` (`guru_id`, `status`),
   CONSTRAINT `fk_wali_kelas_rombel`
     FOREIGN KEY (`rombel_id`) REFERENCES `rombel`(`rombel_id`)
@@ -385,20 +434,19 @@ CREATE TABLE `siswa_qr` (
   `payload_raw` VARCHAR(255) NOT NULL COMMENT 'Isi QR dari kartu vendor. Minimal berisi nama dan NISN.',
   `payload_normalized` VARCHAR(255) NOT NULL,
   `payload_nama` VARCHAR(120) DEFAULT NULL,
-  `payload_nisn` VARCHAR(20) DEFAULT NULL,
-  `is_primary` TINYINT(1) NOT NULL DEFAULT 1,
-  `status` ENUM('aktif','nonaktif','dicabut') NOT NULL DEFAULT 'aktif',
+  `payload_nisn` VARCHAR(20) NOT NULL,
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`siswa_qr_id`),
   UNIQUE KEY `uk_siswa_qr_payload` (`payload_normalized`),
-  KEY `idx_siswa_qr_siswa` (`siswa_id`, `status`),
-  KEY `idx_siswa_qr_nisn` (`payload_nisn`),
+  UNIQUE KEY `uk_siswa_qr_siswa` (`siswa_id`),
+  UNIQUE KEY `uk_siswa_qr_payload` (`payload_normalized`),
+  UNIQUE KEY `uk_siswa_qr_nisn` (`payload_nisn`),
   CONSTRAINT `fk_siswa_qr_siswa`
     FOREIGN KEY (`siswa_id`) REFERENCES `siswa`(`siswa_id`)
     ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `chk_siswa_qr_payload_nisn_not_empty`
-    CHECK (`payload_nisn` IS NOT NULL AND `payload_nisn` <> '');
+    CHECK (`payload_nisn` IS NOT NULL AND `payload_nisn` <> '')
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `jam_pembelajaran` (
@@ -437,7 +485,7 @@ CREATE TABLE `presensi_sesi` (
   `ended_at` DATETIME DEFAULT NULL,
   `last_seen_at` DATETIME DEFAULT NULL,
   `expires_at` DATETIME DEFAULT NULL,
-  `ended_reason` VARCHAR(120) DEFAULT NULL,
+  `ended_reason` VARCHAR(80) DEFAULT NULL,
   `ip_address` VARCHAR(45) DEFAULT NULL,
   `user_agent` TEXT DEFAULT NULL,
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -496,7 +544,7 @@ CREATE TABLE `presensi_scan_log` (
   `payload_raw` VARCHAR(255) NOT NULL,
   `payload_normalized` VARCHAR(255) DEFAULT NULL,
   `payload_nama` VARCHAR(120) DEFAULT NULL,
-  `payload_nisn` VARCHAR(20) DEFAULT NULL,
+  `payload_nisn` VARCHAR(20) NOT NULL,
   `siswa_id` INT UNSIGNED DEFAULT NULL COMMENT 'Pemilik kartu yang terbaca dari QR.',
   `selected_rombel_id` INT UNSIGNED DEFAULT NULL COMMENT 'Rombel yang dipilih guru pada mode rombel.',
   `actual_rombel_id` INT UNSIGNED DEFAULT NULL COMMENT 'Rombel aktif pemilik kartu.',
@@ -512,6 +560,7 @@ CREATE TABLE `presensi_scan_log` (
   KEY `idx_scan_log_siswa` (`siswa_id`, `tanggal`),
   KEY `idx_scan_log_scanned_by` (`scanned_by_user_id`, `tanggal`),
   KEY `idx_scan_log_warning` (`status_scan`, `warning_reason`, `tanggal`),
+  KEY `idx_scan_log_laporan_warning` (`tanggal`, `selected_rombel_id`, `actual_rombel_id`, `status_scan`),
   CONSTRAINT `fk_scan_log_sesi`
     FOREIGN KEY (`presensi_sesi_id`) REFERENCES `presensi_sesi`(`presensi_sesi_id`)
     ON DELETE SET NULL ON UPDATE CASCADE,
@@ -529,7 +578,7 @@ CREATE TABLE `presensi_scan_log` (
     ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `fk_scan_log_resolved_by`
     FOREIGN KEY (`resolved_by_user_id`) REFERENCES `users`(`user_id`)
-    ON DELETE SET NULL ON UPDATE CASCADE
+    ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `chk_scan_log_warning_reason`
     CHECK (
       (`status_scan` = 'warning' AND `warning_reason` <> 'none')
@@ -563,6 +612,8 @@ CREATE TABLE `presensi_jam_siswa` (
   KEY `idx_presensi_rombel` (`tanggal`, `rombel_id_snapshot`, `status`),
   KEY `idx_presensi_sesi` (`presensi_sesi_id`),
   KEY `idx_presensi_scan_log` (`scan_log_id`),
+  KEY `idx_pjs_laporan_rombel_tanggal_jam_status` (`rombel_id_snapshot`, `tanggal`, `jam_id`, `status`),
+  KEY `idx_pjs_laporan_user_tanggal_mode` (`input_by_user_id`, `tanggal`, `mode_presensi`),
   CONSTRAINT `fk_presensi_jam_siswa_siswa`
     FOREIGN KEY (`siswa_id`) REFERENCES `siswa`(`siswa_id`)
     ON DELETE RESTRICT ON UPDATE CASCADE,
@@ -724,6 +775,32 @@ CREATE TABLE `user_activities` (
     ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE `system_error_logs` (
+  `error_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `user_id` INT UNSIGNED DEFAULT NULL,
+  `presensi_sesi_id` BIGINT UNSIGNED DEFAULT NULL,
+  `module_name` VARCHAR(80) DEFAULT NULL,
+  `error_code` VARCHAR(80) DEFAULT NULL,
+  `error_message` TEXT NOT NULL,
+  `payload_json` JSON DEFAULT NULL,
+  `ip_address` VARCHAR(45) DEFAULT NULL,
+  `user_agent` TEXT DEFAULT NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (`error_id`),
+  KEY `idx_error_user` (`user_id`, `created_at`),
+  KEY `idx_error_sesi` (`presensi_sesi_id`, `created_at`),
+  KEY `idx_error_module` (`module_name`, `created_at`),
+
+  CONSTRAINT `fk_error_user`
+    FOREIGN KEY (`user_id`) REFERENCES `users`(`user_id`)
+    ON DELETE SET NULL ON UPDATE CASCADE,
+
+  CONSTRAINT `fk_error_sesi`
+    FOREIGN KEY (`presensi_sesi_id`) REFERENCES `presensi_sesi`(`presensi_sesi_id`)
+    ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- =========================================================
 -- 6. VIEW BANTU
 -- =========================================================
@@ -837,6 +914,39 @@ LEFT JOIN `users` u ON u.`user_id` = l.`scanned_by_user_id`
 WHERE l.`status_scan` = 'warning'
   AND l.`resolved_at` IS NULL;
 
+CREATE OR REPLACE VIEW `v_warning_wali_kelas_inbox` AS
+SELECT
+  l.`scan_log_id`,
+  l.`tanggal`,
+  l.`scanned_at`,
+  l.`presensi_sesi_id`,
+  l.`siswa_id` AS `pemilik_kartu_siswa_id`,
+  s.`nama_lengkap` AS `pemilik_kartu_nama`,
+  s.`nisn` AS `pemilik_kartu_nisn`,
+  l.`selected_rombel_id`,
+  rs.`label_rombel` AS `selected_rombel_label`,
+  l.`actual_rombel_id`,
+  ra.`label_rombel` AS `actual_rombel_label`,
+  rwk.`guru_id` AS `wali_guru_id`,
+  u.`user_id` AS `wali_user_id`,
+  l.`warning_reason`,
+  l.`catatan_siswa_pembawa_kartu`,
+  l.`resolved_at`
+FROM `presensi_scan_log` l
+JOIN `siswa` s
+  ON s.`siswa_id` = l.`siswa_id`
+LEFT JOIN `rombel` rs
+  ON rs.`rombel_id` = l.`selected_rombel_id`
+LEFT JOIN `rombel` ra
+  ON ra.`rombel_id` = l.`actual_rombel_id`
+JOIN `rombel_wali_kelas` rwk
+  ON rwk.`rombel_id` = l.`actual_rombel_id`
+ AND rwk.`status` = 'aktif'
+JOIN `users` u
+  ON u.`guru_id` = rwk.`guru_id`
+WHERE l.`status_scan` = 'warning'
+  AND l.`resolved_at` IS NULL;
+
 CREATE OR REPLACE VIEW `v_notifikasi_user_inbox` AS
 SELECT
   n.`notifikasi_id`,
@@ -877,6 +987,45 @@ SELECT
 FROM `import_jobs` ij
 LEFT JOIN `tahun_ajaran` ta ON ta.`tahun_ajaran_id` = ij.`tahun_ajaran_id`
 LEFT JOIN `users` u ON u.`user_id` = ij.`created_by`;
+
+CREATE OR REPLACE VIEW `v_presensi_session_rekap` AS
+SELECT
+  ps.`presensi_sesi_id`,
+  ps.`session_uuid`,
+  ps.`tanggal`,
+  ps.`mode_presensi`,
+  ps.`rombel_id`,
+  rb.`label_rombel`,
+  ps.`status` AS `status_sesi`,
+  ps.`opened_by_user_id`,
+  u.`username` AS `created_by_username`,
+  COUNT(pjs.`presensi_id`) AS `total_presensi`,
+  SUM(CASE WHEN pjs.`status` = 'hadir' THEN 1 ELSE 0 END) AS `total_hadir`,
+  SUM(CASE WHEN pjs.`status` = 'terlambat' THEN 1 ELSE 0 END) AS `total_terlambat`,
+  SUM(CASE WHEN pjs.`status` = 'alpha' THEN 1 ELSE 0 END) AS `total_alpha`,
+  SUM(CASE WHEN pjs.`status` = 'izin' THEN 1 ELSE 0 END) AS `total_izin`,
+  SUM(CASE WHEN pjs.`status` = 'sakit' THEN 1 ELSE 0 END) AS `total_sakit`,
+  ps.`started_at`,
+  ps.`ended_at`
+FROM `presensi_sesi` ps
+LEFT JOIN `presensi_jam_siswa` pjs
+  ON pjs.`presensi_sesi_id` = ps.`presensi_sesi_id`
+LEFT JOIN `rombel` rb
+  ON rb.`rombel_id` = ps.`rombel_id`
+LEFT JOIN `users` u
+  ON u.`user_id` = ps.`opened_by_user_id`
+GROUP BY
+  ps.`presensi_sesi_id`,
+  ps.`session_uuid`,
+  ps.`tanggal`,
+  ps.`mode_presensi`,
+  ps.`rombel_id`,
+  rb.`label_rombel`,
+  ps.`status`,
+  ps.`opened_by_user_id`,
+  u.`username`,
+  ps.`started_at`,
+  ps.`ended_at`;
 
 -- =========================================================
 -- 7. SEED DATA DASAR

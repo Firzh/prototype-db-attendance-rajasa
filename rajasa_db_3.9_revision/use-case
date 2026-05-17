@@ -1,0 +1,225 @@
+penggunaan pada tabel `presensi_sesi_jam`
+
+Contoh yang harus ditolak backend:
+    jam 1, 3, 5
+    jam 2, 4
+    jam 1, 2, 4
+    lebih dari 3 jam
+
+Validasi backend yang wajib dibuat:
+    1. jumlah jam maksimal 3
+    2. jam harus berurutan
+    3. jam tidak boleh sudah lewat
+    4. Jam tidak boleh dipakai ulang pada tanggal dan rombel yang sama jika sesi sebelumnya masih aktif, suspended, atau sudah selesai.
+
+Alasannya, kalau hanya mengecek sesi yang sudah selesai, bisa muncul masalah:
+    guru membuat sesi jam 1 dan 2,
+    belum selesai,
+    lalu membuat sesi baru lagi untuk jam 1 dan 2,
+    akhirnya bentrok.
+
+Jadi validasi backend sebaiknya memblokir sesi dengan status:
+    aktif
+    suspended
+    selesai
+
+Dan boleh mengabaikan sesi dengan status:
+    gagal
+    expired
+    terputus
+
+Contoh logic:
+
+sort($jamDipilih);
+
+if (count($jamDipilih) > 3) {
+    throw new Exception('Maksimal 3 jam pelajaran.');
+}
+
+for ($i = 1; $i < count($jamDipilih); $i++) {
+    if ($jamDipilih[$i] !== $jamDipilih[$i - 1] + 1) {
+        throw new Exception('Jam pelajaran harus berurutan.');
+    }
+}
+
+=============================================================================================
+
+penggunaan pada tabel `presensi_jam_siswa`
+
+Saat guru membuat sesi rombel:
+    buat presensi_sesi
+    → simpan jam di presensi_sesi_jam
+    → ambil semua siswa aktif di rombel
+    → insert ke presensi_jam_siswa dengan status alpha
+
+Saat siswa scan valid:
+    status alpha → hadir
+
+Saat mode piket:
+    insert/update status → terlambat
+
+Contoh SQL logic:
+
+INSERT IGNORE INTO `presensi_jam_siswa`
+(
+  `presensi_sesi_id`,
+  `siswa_id`,
+  `tanggal`,
+  `jam_id`,
+  `rombel_id_snapshot`,
+  `status`,
+  `mode_presensi`,
+  `input_by_user_id`
+)
+SELECT
+  :presensi_sesi_id,
+  psr.`siswa_id`,
+  :tanggal,
+  psj.`jam_id`,
+  psr.`rombel_id`,
+  'alpha',
+  'rombel',
+  :user_id
+FROM `penempatan_siswa_rombel` psr
+JOIN `presensi_sesi_jam` psj
+  ON psj.`presensi_sesi_id` = :presensi_sesi_id
+WHERE psr.`rombel_id` = :rombel_id
+  AND psr.`is_aktif` = 1;
+
+
+Saat scan berhasil:
+
+UPDATE `presensi_jam_siswa`
+SET
+  `status` = 'hadir',
+  `scan_log_id` = :scan_log_id,
+  `updated_at` = CURRENT_TIMESTAMP
+WHERE `siswa_id` = :siswa_id
+  AND `tanggal` = :tanggal
+  AND `jam_id` IN (:jam_id_1, :jam_id_2, :jam_id_3);
+
+==============================================================================================
+
+penggunaan pada tabel `presensi_sesi_jam`
+belum bisa otomatis mencegah lebih dari 3 data untuk satu sesi.
+
+Backend wajib cek:
+
+if (count($jamDipilih) > 3) {
+    throw new Exception('Maksimal 3 jam pelajaran.');
+}
+
+- Validasi jam berurutan
+
+Backend wajib cek:
+
+sort($jamDipilih);
+
+for ($i = 1; $i < count($jamDipilih); $i++) {
+    if ($jamDipilih[$i] !== $jamDipilih[$i - 1] + 1) {
+        throw new Exception('Jam pelajaran harus berurutan.');
+    }
+}
+
+- Validasi jam tidak dipakai ulang
+
+Backend wajib cek apakah kombinasi ini sudah ada:
+    tanggal
+    rombel_id
+    jam_id
+    status sesi aktif/suspended/selesai
+
+Kalau sudah ada, tolak sesi baru.
+==============================================================================================
+
+penggunaan pada tabel `system_error_logs`
+
+Dipakai untuk mencatat:
+    kamera gagal
+    server lambat
+    scan gagal disimpan
+    session error
+    validasi backend gagal
+    database query error yang masih bisa dicatat
+
+Jangan dipakai untuk:
+    login user
+    edit presensi
+    hapus data
+    aktivitas normal user
+
+==============================================================================================
+
+penggunaan pada view `v_warning_wali_kelas_inbox`
+
+Fungsi view ini
+    wali_user_id → user wali kelas yang perlu melihat warning
+    actual_rombel_id → rombel pemilik kartu QR
+    selected_rombel_id → rombel yang sedang dipresensi guru
+
+==============================================================================================
+
+penggunaaan pada tabel `presensi_sesi` [BE]
+Untuk sesi gagal:
+
+UPDATE `presensi_sesi`
+SET
+  `status` = 'gagal',
+  `ended_reason` = 'system_error',
+  `ended_at` = CURRENT_TIMESTAMP,
+  `updated_at` = CURRENT_TIMESTAMP
+WHERE `presensi_sesi_id` = :presensi_sesi_id;
+
+Untuk koneksi terputus:
+
+UPDATE `presensi_sesi`
+SET
+  `status` = 'terputus',
+  `ended_reason` = 'connection_lost',
+  `updated_at` = CURRENT_TIMESTAMP
+WHERE `presensi_sesi_id` = :presensi_sesi_id;
+
+Untuk pause:
+
+UPDATE `presensi_sesi`
+SET
+  `status` = 'suspended',
+  `updated_at` = CURRENT_TIMESTAMP
+WHERE `presensi_sesi_id` = :presensi_sesi_id;
+
+==============================================================================================
+
+penggunaan pada tabel `user_activities`
+
+presensi_edit_log khusus edit presensi. system_error_logs khusus error. user_activities bisa untuk login, logout, buka halaman, export laporan, dan aktivitas normal lain.
+jangan semua aktivitas kecil dicatat dulu. 
+Cukup aktivitas penting:
+    login
+    logout
+    export laporan
+    edit data master
+    edit presensi
+    hapus data
+
+==============================================================================================
+
+Saat QR discan, backend cukup mencari berdasarkan payload_normalized.
+
+SELECT
+  sq.siswa_qr_id,
+  sq.siswa_id,
+  sq.payload_raw,
+  sq.payload_normalized,
+  sq.payload_nama,
+  sq.payload_nisn,
+  s.nama_lengkap,
+  s.nisn,
+  psr.rombel_id
+FROM siswa_qr sq
+JOIN siswa s 
+  ON s.siswa_id = sq.siswa_id
+LEFT JOIN penempatan_siswa_rombel psr
+  ON psr.siswa_id = s.siswa_id
+  AND psr.is_aktif = 1
+WHERE sq.payload_normalized = ?
+LIMIT 1;
