@@ -1,0 +1,34 @@
+Untuk versi ramping, tabel berikut bisa dikeluarkan dulu:
+
+master_jenis_ruangan
+ruangan
+perangkat_esp32
+ruangan_perangkat
+plotting_rombel
+media_berkas
+arsip_batch
+arsip_detail
+user_activity_cold_archives
+user_manage_buffer
+user_activity_display_buffer
+jurusan_dashboard_buffer
+jurusan_ruangan_buffer
+scanner_devices
+notification_rules
+role_notification_preferences
+user_notification_preferences
+notifikasi_admin
+notifikasi_penerima
+
+
+policies
+policy_permissions
+role_policies
+user_policies
+groups
+group_users
+group_roles
+group_policies
+user_access_tokens
+
+Catatan: beberapa tabel di atas tidak harus benar-benar dihapus permanen. Bisa dipindahkan ke bagian legacy/future development. Tetapi jangan dipakai untuk alur presensi terbaru agar logic tidak berat.

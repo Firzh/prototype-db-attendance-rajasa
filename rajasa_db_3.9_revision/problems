@@ -1,0 +1,59 @@
+1. Tabel presensi belum berbasis jam pembelajaran.
+   scope terbaru adalah presensi per jam.
+
+2. Tabel presensi masih berbasis ruangan/check-in/check-out.
+   alur terbaru tidak mewajibkan ruangan.
+
+3. Mode piket belum didukung secara jelas.
+   Scanner session belum memiliki mode piket.
+
+4. QR masih diperlakukan seperti token/hash internal.
+   QR vendor hanya berisi nama dan NISN.
+
+5. Database terlalu banyak tabel pendukung yang belum dibutuhkan.
+   Terutama ruangan, perangkat, arsip, cold archive, dan notifikasi kompleks.
+
+7. View v_log_scan_ringkas bermasalah
+   Di file SQL ada bagian:
+
+   CREATE OR REPLACE VIEW `v_log_scan_ringkas` AS
+   SELECT
+   SELECT
+
+   Ada SELECT ganda. Ini akan membuat SQL error.
+   Saran:
+
+   hapus salah satu SELECT,
+   lalu cek ulang seluruh view.
+
+8. presensi.ruangan_id masih wajib
+   Ini tidak cocok dengan mode piket dan presensi berbasis rombel.
+   Saran:
+   hapus,
+   atau ubah menjadi nullable,
+   tetapi jangan dipakai sebagai kunci utama presensi.
+
+9. log_scan_qr.ruangan_id masih wajib
+
+   Ini juga tidak cocok dengan scan via HP guru/staff.
+   Saran:
+   ubah nullable,
+   atau hilangkan dari log scan baru.
+
+10. Unique key presensi belum sesuai
+   Saat ini pencegahan presensi ganda masih berbasis ruangan/plotting/jadwal. Padahal scope terbaru butuh anti ganda berdasarkan:
+   tanggal + siswa + jam pembelajaran
+   Saran unique key final:
+   UNIQUE (tanggal, siswa_id, jam_ke)
+
+
+
+[done]
+
+6. Ada referensi ke jadwal_lab, tetapi tabelnya tidak ada
+   Beberapa bagian database masih merujuk ke jadwal_lab. Ini berbahaya karena SQL bisa gagal saat dijalankan.
+   Saran:
+   hapus semua foreign key ke jadwal_lab, atau
+   buat tabel jadwal_lab.
+   Namun untuk scope terbaru, lebih baik hapus dulu karena belum ada jadwal tetap terdigitalisasi.
+

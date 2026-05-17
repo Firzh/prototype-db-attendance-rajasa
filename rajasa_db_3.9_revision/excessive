@@ -1,0 +1,198 @@
+1. master_jenis_ruangan
+Status: berlebih untuk scope sekarang.
+Alasannya, presensi terbaru tidak bergantung pada jenis ruangan. Guru memilih rombel atau piket, bukan ruangan.
+
+Saran:
+Hapus dari scope MVP.
+Simpan untuk pengembangan lanjutan jika nanti sekolah ingin presensi berbasis ruang.
+
+2. ruangan
+Status: berlebih untuk scope sekarang.
+Database saat ini masih menjadikan ruangan sebagai bagian kuat dari presensi. Padahal kamu sudah menetapkan presensi berbasis rombel, piket, dan jam pembelajaran.
+
+Masalah besar:
+presensi.ruangan_id masih NOT NULL.
+log_scan_qr.ruangan_id juga NOT NULL.
+Mode piket tidak selalu punya ruangan tertentu.
+
+Saran:
+Jangan wajibkan ruangan_id.
+Untuk MVP, pindahkan ruangan ke fitur opsional.
+
+3. perangkat_esp32
+Status: tidak sesuai dengan scope terbaru.
+Alur terbaru memakai kamera HP guru/staff melalui website. Bukan lagi ESP32.
+
+Saran:
+Jadikan legacy.
+Jangan dipakai di flow presensi baru.
+Hapus dependency dari tabel presensi dan log scan baru.
+
+4. ruangan_perangkat
+Status: tidak sesuai dengan scope terbaru.
+Relasi ruangan dengan perangkat tidak dibutuhkan karena scanner adalah HP guru/staff.
+
+Saran:
+Hapus dari scope presensi baru.
+Simpan hanya jika sistem lama masih berjalan.
+
+5. plotting_rombel
+Status: berlebih untuk scope sekarang.
+Tabel ini mengikat rombel ke ruangan. Padahal guru bisa memilih seluruh rombel dan belum ada jadwal tetap terdigitalisasi.
+
+Saran:
+Tidak perlu dipakai untuk alur presensi terbaru.
+Rombel cukup diambil dari rombel dan penempatan_siswa_rombel.
+
+6. media_berkas
+Status: berlebih untuk MVP.
+Scope terbaru tidak memakai foto, bukti izin, selfie, capture QR, atau dokumen pendukung.
+
+Saran:
+Tidak perlu untuk presensi QR tahap ini.
+Jika izin/sakit nanti butuh upload bukti, baru aktifkan.
+
+7. arsip_batch
+Status: berlebih.
+Tidak ada kebutuhan arsip batch dalam alur presensi terbaru.
+
+Saran:
+Tunda dulu.
+
+8. arsip_detail
+Status: berlebih.
+Masih satu paket dengan arsip batch dan media berkas. Tidak perlu untuk MVP.
+
+9. user_activity_cold_archives
+Status: berlebih.
+Cold archive terlalu jauh untuk scope sekarang.
+
+Saran:
+Gunakan audit log sederhana dulu.
+
+10. user_manage_buffer
+Status: berlebih.
+Tabel buffer tampilan belum perlu. Data user bisa langsung diambil dari users, roles, user_roles, guru_staff, dan siswa.
+
+11. user_activity_display_buffer
+Status: berlebih.
+Belum perlu cache tampilan aktivitas. Untuk awal cukup pakai audit log.
+
+12. jurusan_dashboard_buffer
+Status: berlebih.
+Dashboard belum masuk scope utama.
+
+13. jurusan_ruangan_buffer
+Status: tidak sesuai dengan scope terbaru.
+Masih berbasis ruangan. Tidak perlu untuk presensi rombel dan piket.
+
+14. scanner_devices
+Status: opsional, cenderung berlebih.
+Tabel ini menyimpan device HP/tablet/browser. Namun kamu sudah menyatakan tidak perlu pembatasan IP address dan tidak ada kebutuhan trusted device.
+
+Saran ramping:
+Hapus tabel scanner_devices.
+Simpan user_agent, device_type, dan ip_address langsung di tabel presensi_sesi atau presensi_scan_log.
+
+15. qr_tokens
+Status: perlu diganti atau disederhanakan.
+Tabel ini memakai qr_payload_hash. Padahal kamu menyatakan QR vendor hanya berisi nama dan NISN, tidak dienkripsi, dan sistem hanya membungkus data vendor.
+
+Saran:
+Ganti menjadi tabel yang lebih sederhana:
+    siswa_qr
+
+Isinya:
+    siswa_qr_id
+    siswa_id
+    payload_raw
+    payload_normalized
+    nisn_detected
+    nama_detected
+    status
+    created_at
+
+Atau lebih ramping lagi, cukup simpan QR payload di tabel siswa jika satu siswa hanya punya satu QR aktif.
+
+16. log_scan_qr
+Status: perlu diganti struktur.
+
+Tabel ini masih membawa:
+    ruangan_id
+    perangkat_id
+    jadwal_id
+    scan_type checkin/checkout
+    foto capture
+    relasi ESP32
+    relasi QR token hash
+
+Itu tidak cocok dengan scope terbaru.
+
+Saran:
+Ganti menjadi:
+    presensi_scan_log
+
+Fokusnya:
+    sesi scan
+    payload QR
+    hasil parsing nama dan NISN
+    siswa pemilik kartu
+    rombel yang dipilih
+    rombel pemilik kartu
+    status scan
+    warning atau tidak
+    catatan siswa pembawa kartu
+    user yang scan
+    waktu scan
+
+17. presensi
+Status: perlu dirombak besar.
+Ini tabel paling penting yang belum sesuai.
+
+Masalahnya:
+    belum ada jam_ke,
+    masih berbasis tanggal harian,
+    masih ada waktu_masuk dan waktu_keluar,
+    masih ada checkout,
+    wajib ruangan_id,
+    belum membedakan mode rombel dan piket,
+    belum bisa menyimpan 1 scan untuk 3 jam pembelajaran,
+    unique key masih berbasis siswa, tanggal, ruangan, plotting, jadwal.
+
+Scope terbaru butuh presensi per jam.
+
+Saran:
+Ganti menjadi tabel:
+    presensi_jam_siswa
+
+Satu baris = satu siswa + satu tanggal + satu jam pembelajaran.
+
+Contoh:
+
+siswa	tanggal	jam_ke	status
+Andi	2026-05-17	1	hadir
+Andi	2026-05-17	2	hadir
+Andi	2026-05-17	3	hadir
+
+Kalau guru memilih jam 1, 2, 3 lalu scan Andi satu kali, sistem membuat 3 baris.
+
+18. notification_rules, notifikasi, notifikasi_penerima, user_notification_preferences, role_notification_preferences
+Status: terlalu kompleks untuk scope sekarang.
+Kamu hanya butuh:
+
+pop-up 10 detik untuk wali kelas,
+notifikasi di akun siswa,
+mungkin notifikasi warning untuk guru/admin.
+
+Saran:
+Gunakan satu tabel sederhana:
+notifikasi_user
+
+Tidak perlu rule engine dulu.
+
+19. notifikasi_admin
+Status: bisa diganti.
+Nama tabel terlalu spesifik untuk admin. Padahal notifikasi juga dibutuhkan siswa dan wali kelas.
+
+Saran:
+Ganti dengan notifikasi_user.

@@ -1,0 +1,185 @@
+1. tahun_ajaran
+
+Alasan: wajib untuk data akademik.
+
+Kamu butuh auto naik kelas dan riwayat rombel. Jangan hanya mengandalkan string 2025/2026 di banyak tabel.
+
+Struktur inti:
+
+tahun_ajaran_id
+nama_tahun_ajaran
+semester_aktif
+tanggal_mulai
+tanggal_selesai
+is_aktif
+
+Manfaat:
+
+mendukung naik kelas otomatis,
+menjaga histori,
+memudahkan filter laporan.
+2. jam_pembelajaran
+
+Alasan: scope presensi berbasis jam 1 sampai 8.
+
+Struktur inti:
+
+jam_id
+jam_ke
+label
+waktu_mulai
+waktu_selesai
+hari_tipe
+status
+
+Catatan: waktu bisa kosong atau opsional jika sekolah belum punya jadwal detail. Minimal simpan jam_ke.
+
+3. presensi_sesi
+
+Alasan: menggantikan scanner_sessions.
+
+Tabel ini menyimpan sesi presensi yang dibuka guru/staff.
+
+Struktur inti:
+
+presensi_sesi_id
+session_uuid
+mode_presensi ENUM('rombel','piket')
+rombel_id NULL
+tanggal
+status ENUM('aktif','suspended','selesai','gagal','expired')
+opened_by_user_id
+closed_by_user_id
+started_at
+paused_at
+resumed_at
+ended_at
+last_seen_at
+user_agent
+ip_address
+
+Catatan:
+
+rombel_id wajib untuk mode rombel.
+rombel_id boleh NULL untuk mode piket.
+Mode piket langsung multi-rombel.
+4. presensi_sesi_jam
+
+Alasan: satu sesi bisa memilih lebih dari satu jam.
+
+Ini tabel penting karena jam bisa 1, 2, 3 sekaligus.
+
+Struktur inti:
+
+presensi_sesi_jam_id
+presensi_sesi_id
+jam_ke
+urutan
+
+Validasi dilakukan di backend:
+
+maksimal 3 jam,
+harus berurutan,
+tidak boleh memilih jam yang sudah selesai,
+tidak boleh membuat sesi baru untuk jam yang sama.
+5. presensi_jam_siswa
+
+Alasan: tabel utama presensi per jam.
+
+Ini pengganti tabel presensi lama.
+
+Struktur inti:
+
+presensi_id
+tanggal
+siswa_id
+rombel_id_snapshot
+jam_ke
+status ENUM('hadir','terlambat','alpha','izin','sakit')
+mode_presensi ENUM('rombel','piket','manual')
+presensi_sesi_id
+scan_log_id
+input_by_user_id
+scanned_at
+edited_by_user_id
+edited_at
+keterangan
+
+Unique key wajib:
+
+UNIQUE (tanggal, siswa_id, jam_ke)
+
+Ini mencegah presensi ganda.
+
+6. presensi_scan_log
+
+Alasan: menyimpan semua kejadian scan, termasuk warning.
+
+Struktur inti:
+
+scan_log_id
+presensi_sesi_id
+tanggal
+scanned_at
+scanned_by_user_id
+payload_raw
+payload_nama
+payload_nisn
+siswa_id
+selected_rombel_id
+actual_rombel_id
+status_scan ENUM('berhasil','warning','invalid','ditolak','error')
+is_warning
+warning_reason
+catatan_siswa_pembawa_kartu
+created_at
+
+Untuk kasus kartu beda rombel:
+
+siswa_id = pemilik kartu
+selected_rombel_id = rombel yang sedang dipresensi
+actual_rombel_id = rombel pemilik kartu
+status_scan = warning
+data tidak masuk ke presensi_jam_siswa
+tetap tampil di bawah siswa alpha
+7. presensi_edit_log
+
+Alasan: semua edit manual harus tercatat.
+
+Karena admin, guru, staff, atau custom access bisa mengubah presensi.
+
+Struktur inti:
+
+edit_log_id
+presensi_id
+field_name
+old_value
+new_value
+edited_by_user_id
+edited_at
+alasan_edit
+
+Ini lebih ramping daripada user_activities yang terlalu umum.
+
+8. notifikasi_user
+
+Alasan: menggantikan notifikasi kompleks.
+
+Struktur inti:
+
+notifikasi_id
+user_id
+tipe
+judul
+pesan
+related_table
+related_id
+is_read
+popup_until
+created_at
+
+Untuk wali kelas:
+
+muncul pop-up 10 detik saat login,
+terkait dengan presensi_scan_log,
+tipe: warning_presensi.

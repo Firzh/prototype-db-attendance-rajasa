@@ -1,0 +1,75 @@
+Berikut daftar **nama tabel aktif** dalam file `prototype-db-3..sql`:
+
+[used]
+
+1. `roles`
+2. `permissions`
+3. `user_roles`
+4. `user_permissions`
+5. `users`
+
+6. `policies` [fdv]
+7. `policy_permissions` [fdv]
+8. `role_permissions`
+9. `groups`
+10. `jurusan`
+11. `rombel`
+12. `guru_staff`
+13. `siswa`
+14. `profil_siswa`
+15. `siswa_mutasi`
+16. `penempatan_siswa_rombel`
+17. `role_policies`
+18. `user_policies`
+19. `group_users`
+20. `group_roles`
+21. `group_policies`
+22. `user_sessions`
+23. `user_access_tokens`
+24. `master_jenis_ruangan`
+25. `ruangan`
+26. `perangkat_esp32`
+27. `ruangan_perangkat`
+28. `plotting_rombel`
+29. `jadwal_lab` [del]
+30. `media_berkas`
+31. `arsip_batch`
+32. `arsip_detail`
+33. `qr_tokens`
+34. `log_scan_qr`
+35. `presensi`
+36. `presensi_online` [del]
+37. `presensi_online_lampiran` [del]
+38. `presensi_online_verifikasi` [del]
+39. `ai_recognition_jobs` [del]
+40. `sesi_ujian` [del]
+41. `peserta_ujian` [del]
+42. `konfigurasi`
+43. `user_activity_cold_archives`
+44. `user_activities`
+45. `user_manage_buffer`
+46. `user_activity_display_buffer`
+47. `notifikasi_admin`
+48. `kalender_akademik` [del]
+49. `jurusan_dashboard_buffer`
+50. `jurusan_ruangan_buffer`
+51. `mata_pelajaran` [del]
+52. `nilai_akademik` [del]
+53. `user_ui_preferences` [del]
+54. `rombel_wali_kelas`
+55. `import_jobs`
+56. `import_column_mappings`
+57. `import_row_logs`
+58. `notification_rules`
+59. `notifikasi`
+60. `notifikasi_penerima`
+61. `user_notification_preferences`
+62. `scanner_devices`
+63. `scanner_sessions`
+64. `role_notification_preferences`
+
+Total: **64 tabel aktif**.
+
+Ada juga 1 tabel yang terlihat **dikomentari / tidak aktif**:
+
+`presensi_snapshot_buffer` [del]

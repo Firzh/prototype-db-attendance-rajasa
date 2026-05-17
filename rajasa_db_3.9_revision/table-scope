@@ -1,0 +1,33 @@
+Untuk scope sekarang, cukup gunakan struktur inti berikut:
+
+1. Master akses
+   users
+   roles
+   permissions
+   user_roles
+   user_permissions
+
+2. Master akademik
+   guru_staff
+   siswa
+   jurusan
+   rombel
+   tahun_ajaran
+   penempatan_siswa_rombel
+   rombel_wali_kelas
+   siswa_mutasi
+
+3. Presensi
+   jam_pembelajaran
+   presensi_sesi
+   presensi_sesi_jam
+   presensi_jam_siswa
+   presensi_scan_log
+   presensi_edit_log
+
+4. Import dan notifikasi
+   import_jobs
+   import_row_logs
+   notifikasi_user
+
+Total cukup sekitar 22 tabel inti.

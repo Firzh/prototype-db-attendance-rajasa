@@ -1,0 +1,372 @@
+A. Pertanyaan tentang Aktor dan Hak Akses
+Siapa saja aktor dalam sistem presensi ini?
+Apakah hanya guru dan staff yang boleh melakukan presensi?
+Apakah admin juga bisa melakukan presensi manual?
+Apakah wali kelas boleh melihat rekap semua siswa di kelasnya?
+Apakah guru hanya bisa mengakses rombel sesuai jadwal mengajarnya?
+Apakah staff piket bisa mengakses semua rombel dan semua angkatan?
+Apakah kepala sekolah atau admin bisa melihat seluruh rekap presensi?
+Apakah siswa punya akun untuk melihat status presensinya sendiri?
+Apakah orang tua akan diberi akses atau notifikasi?
+Bagaimana sistem membedakan role guru, staff, wali kelas, dan admin?
+B. Pertanyaan tentang Mode Presensi
+Apa perbedaan utama antara presensi rombel dan presensi piket?
+Kapan guru harus memilih mode rombel?
+Kapan staff harus memilih mode piket?
+Apakah mode piket hanya untuk siswa terlambat?
+Apakah mode piket bisa digunakan untuk siswa izin keluar atau masuk kembali?
+Apakah siswa yang dipresensi lewat piket otomatis berstatus terlambat?
+Apakah mode rombel hanya berlaku untuk siswa dalam satu kelas?
+Apakah mode rombel tetap bisa memindai siswa dari kelas lain?
+Jika siswa dari kelas lain terscan di mode rombel, apakah datanya disimpan atau hanya diberi peringatan?
+Apakah guru bisa berpindah dari mode rombel ke mode piket dalam satu sesi?
+C. Pertanyaan tentang Jam Pembelajaran
+Apakah setiap presensi harus terikat pada jam pembelajaran?
+Apakah mode piket juga perlu memilih jam pembelajaran?
+Jika guru mengajar dua jam, apakah cukup memilih jam 1 dan 2?
+Mengapa batas maksimal pilihan jam adalah tiga?
+Apakah guru boleh memilih jam yang tidak berurutan?
+Jika memilih jam 4, apakah pilihan berikutnya hanya boleh jam 5 dan 6?
+Bagaimana jika guru salah memilih jam pembelajaran?
+Apakah jam yang sudah selesai masih bisa dipilih?
+Apakah sistem perlu menampilkan jam pembelajaran yang sedang berlangsung secara otomatis?
+Apakah jadwal jam pembelajaran berbeda antara hari biasa dan hari Jumat?
+D. Pertanyaan tentang Data Siswa dan Rombel
+Data siswa apa saja yang wajib muncul saat presensi?
+Apakah cukup menampilkan nama, NIS, rombel, dan status?
+Apakah foto siswa perlu ditampilkan saat QR discan?
+Apakah siswa yang tidak aktif masih bisa discan?
+Bagaimana sistem menangani siswa pindahan?
+Bagaimana sistem menangani siswa yang pindah rombel?
+Apakah satu siswa hanya boleh punya satu QR aktif?
+Apakah QR siswa perlu diperbarui setiap tahun ajaran?
+Apakah data rombel mengikuti tahun ajaran tertentu?
+Apakah siswa kelas 10, 11, dan 12 dipisahkan berdasarkan angkatan atau rombel?
+E. Pertanyaan tentang Scan QR
+Apakah scan QR hanya bisa dilakukan dari kamera HP guru/staff?
+Apakah scan QR boleh dilakukan dari laptop?
+Apakah sistem menyediakan input manual jika kamera bermasalah?
+Apa yang terjadi jika QR tidak terbaca?
+Apa yang terjadi jika QR rusak atau buram?
+Apa yang terjadi jika QR sudah kedaluwarsa?
+Apakah QR berisi NIS saja atau token khusus?
+Apakah QR harus dienkripsi agar tidak mudah dipalsukan?
+Apakah sistem perlu mencatat waktu setiap scan?
+Apakah sistem perlu mencatat siapa guru/staff yang melakukan scan?
+F. Pertanyaan tentang Presensi Ganda
+Apa yang terjadi jika siswa discan dua kali dalam sesi yang sama?
+Apakah scan kedua ditolak atau hanya diberi pesan duplicate?
+Apakah duplicate tetap disimpan di log?
+Bagaimana jika siswa discan oleh dua guru berbeda dalam waktu bersamaan?
+Apakah siswa bisa hadir di lebih dari satu jam pembelajaran?
+Apakah siswa yang sudah hadir di jam 1 harus discan lagi di jam 2?
+Jika guru memilih jam 1, 2, dan 3, apakah satu scan berlaku untuk tiga jam?
+Jika satu scan berlaku untuk beberapa jam, bagaimana statusnya di database?
+Apakah presensi bisa diedit setelah tersimpan?
+Siapa yang boleh membatalkan atau memperbaiki data presensi ganda?
+G. Pertanyaan tentang Status Presensi
+Status apa saja yang digunakan dalam sistem?
+Apakah status minimal terdiri dari hadir, alpha, terlambat, warning, duplicate, dan invalid?
+Apa definisi status alpha?
+Apa definisi status hadir?
+Apa definisi status terlambat?
+Apa definisi status warning?
+Apa definisi status duplicate?
+Apa definisi status invalid?
+Apakah status izin dan sakit juga perlu dimasukkan?
+Apakah status bisa berubah otomatis setelah discan oleh piket?
+H. Pertanyaan tentang Warning Kartu Tidak Sesuai
+Apa yang terjadi jika siswa dari rombel lain ikut terscan?
+Apakah sistem langsung menolak scan tersebut?
+Apakah sistem tetap menyimpan data sebagai warning?
+Apakah popup warning wajib muncul?
+Informasi apa yang muncul di popup warning?
+Apakah popup menampilkan nama pemilik kartu, rombel, dan angkatan?
+Apakah scan harus berhenti sampai guru menekan konfirmasi?
+Apakah guru wajib menulis catatan saat muncul warning?
+Apakah guru bisa memilih tindakan: abaikan, catat pelanggaran, atau simpan warning?
+Apakah warning masuk ke rekap disipliner siswa?
+I. Pertanyaan tentang Kasus Siswa Memakai Kartu Teman
+Bagaimana sistem mengetahui bahwa siswa memakai kartu milik teman?
+Apakah sistem hanya bisa mendeteksi pemilik kartu, bukan pemegang kartu?
+Apakah guru perlu mengisi nama siswa yang diduga memakai kartu?
+Apakah perlu ada kolom catatan manual?
+Apakah perlu ada bukti tambahan seperti foto saat scan?
+Apakah tindakan ini masuk kategori pelanggaran?
+Siapa yang bisa melihat riwayat pelanggaran tersebut?
+Apakah wali kelas mendapat notifikasi jika siswanya terlibat warning?
+Apakah pemilik kartu juga ikut dicatat?
+Apakah warning bisa dikonfirmasi ulang oleh admin?
+J. Pertanyaan tentang Pause dan Selesai Scan
+Apa fungsi tombol pause scan?
+Apakah pause hanya menghentikan kamera atau juga menghentikan sesi?
+Apakah saat pause, data sebelumnya tetap tersimpan?
+Apakah setelah pause guru bisa melanjutkan sesi yang sama?
+Apa yang terjadi jika guru menutup browser saat pause?
+Apa fungsi tombol selesai scan?
+Apakah selesai scan mengunci data presensi?
+Apakah guru masih bisa mengedit data setelah menekan selesai?
+Apakah sistem perlu menampilkan konfirmasi sebelum selesai?
+Apakah sistem harus memberi peringatan jika masih ada siswa alpha sebelum sesi ditutup?
+K. Pertanyaan tentang Kegagalan Teknis
+Apa yang terjadi jika internet guru terputus saat scan?
+Apakah data scan tetap tersimpan jika koneksi putus?
+Apakah sistem perlu mode antrean offline sementara?
+Apa yang terjadi jika kamera tidak bisa dibuka?
+Apa yang terjadi jika browser tidak mendukung kamera?
+Apa yang terjadi jika server lambat?
+Apa yang terjadi jika database gagal menyimpan data?
+Apakah guru mendapat pesan error yang jelas?
+Apakah sistem punya log error?
+Apakah admin bisa melihat sesi presensi yang gagal atau belum selesai?
+L. Pertanyaan tentang Rekap dan Laporan
+Rekap apa yang muncul setelah selesai scan?
+Apakah rekap menampilkan jumlah hadir, alpha, terlambat, warning, duplicate, dan invalid?
+Apakah rekap bisa difilter berdasarkan tanggal?
+Apakah rekap bisa difilter berdasarkan rombel?
+Apakah rekap bisa difilter berdasarkan guru?
+Apakah rekap bisa difilter berdasarkan jam pembelajaran?
+Apakah data bisa diekspor ke Excel atau PDF?
+Apakah wali kelas bisa melihat rekap harian kelasnya?
+Apakah admin bisa melihat rekap semua rombel?
+Apakah sistem perlu grafik kehadiran siswa?
+M. Pertanyaan tentang Database
+Tabel apa saja yang dibutuhkan?
+Apakah perlu tabel users?
+Apakah perlu tabel siswa?
+Apakah perlu tabel rombel?
+Apakah perlu tabel tahun_ajaran?
+Apakah perlu tabel jadwal_mengajar?
+Apakah perlu tabel sesi_presensi?
+Apakah perlu tabel detail_presensi?
+Apakah perlu tabel scan_log?
+Apakah perlu tabel warning_log atau pelanggaran_presensi?
+N. Pertanyaan tentang Keamanan Sistem
+Apakah QR bisa dipalsukan?
+Apakah QR hanya berisi ID siswa atau token unik?
+Apakah token QR perlu dienkripsi?
+Apakah QR perlu memiliki masa berlaku?
+Apakah sistem mencegah scan dari akun yang tidak berhak?
+Apakah sistem mencatat IP atau perangkat guru?
+Apakah sesi presensi punya batas waktu?
+Apakah data presensi bisa diedit sembarang user?
+Apakah semua perubahan data presensi perlu masuk audit log?
+Apakah admin bisa melihat siapa yang mengubah data presensi?
+O. Pertanyaan untuk Menyempurnakan Flowchart
+Apa titik awal alur?
+Apa kondisi pertama setelah login?
+Apa decision utama setelah masuk halaman presensi?
+Apakah user memilih mode rombel atau piket?
+Jika mode rombel, apakah harus memilih rombel dan jam?
+Jika mode piket, apakah langsung masuk scan QR?
+Apa kondisi jika QR valid?
+Apa kondisi jika QR tidak valid?
+Apa kondisi jika QR beda rombel?
+Apa kondisi jika QR sudah pernah discan?
+Apa proses setelah scan berhasil?
+Apa proses setelah scan warning?
+Apa proses setelah scan duplicate?
+Apa proses setelah guru pause scan?
+Apa proses setelah guru menekan selesai scan?
+P. Pertanyaan Final untuk Mengunci Desain Sistem
+Apakah satu scan bisa mencatat kehadiran untuk beberapa jam sekaligus?
+Apakah mode piket mengubah status siswa menjadi terlambat secara otomatis?
+Apakah siswa yang terlambat tetap dianggap alpha pada jam sebelumnya?
+Apakah warning hanya notifikasi atau masuk database?
+Apakah guru wajib memberi catatan pada kasus warning?
+Apakah tombol selesai scan wajib, atau sistem tetap menyimpan data per scan?
+Apakah sesi presensi bisa dibuka kembali setelah selesai?
+Apakah admin bisa memperbaiki presensi yang salah?
+Apakah siswa dan orang tua akan menerima notifikasi?
+Apakah sistem ini hanya untuk presensi harian atau juga untuk presensi per jam pelajaran?
+
+============================================================================================
+
+A
+1. Guru / staff dengan hak akses yang selevel, atau lebih tinggi, atau intern yang memiliki akses custom khusus
+2. semua yang memiliki akses dengan level guru / staff, atau lebih tinggi, atau custom spesifik presensi
+3. admin bisa mengubah presensi di halaman presensi untuk siswa, pencatatan adalah untuk data siswa yang usil
+4. boleh. itu akan ditampilkan di halaman laporan. halaman presensi hanya untuk recent presensi
+5. sementara tidak. guru bisa akses seluruh rombel. belum ada jadwal tetap yang terdigitalisasi
+6. ya, seperti guru di nomor A5
+7. ya
+8. ya
+9. tidak. itu akan masuk ke akun siswa
+10. dijelaskan dalam database 
+
+B
+1. rombel terikat dengan rombel yang sedang diajar. jika piket itu langsung multi rombel karena yang terlambat dari berbagai rombel
+2. saat mengajar di kelas
+3. saat bertugas piket siswa yang terlambat
+4. ya
+5. tidak, sementara edit manual di halaman presensi
+6. ya
+7. iya, untuk mencegah keusilan siswa yang menggunakan kartu teman nya
+8. iya, namun akan flagged dan memberikan warning (sudah dijelaskan)
+9. tersimpan di tabel berbeda dan diberi status warning untuk presensi hari itu
+10. tidak
+
+C
+1. iya, terikat rombel dan jam pelajaran
+2. default jam pertama
+3. iya
+4. karena jarang ada yang mengajar lebih dari 3 jam, jika mengajar lebih dari 3, bisa melakukan presensi dengan sesi berbeda. misal anakmagang dengan sesi 4 jam. maka bisa membagi menjadi 2 + 2. atau 3 + 1 sesuai dengan pors setiap mata pelajaran
+5. tidak, kecuali mengajar kembali (1+2 lalu 7+8)
+6. 1,2, & 3 lalu sesi 2 = jam ke-4 (seperti jawaban no C4 & C5
+7. bisa diedit pada halaman presensi
+8. tidak
+9. boleh jika data mencukupi, default fallback tidak
+10. kemungkinan
+
+D
+1. jika sesuai hanya akan muncul popup hijau slide in down bertuliskan 'Presensi Berhasil!' di sisi atas hp guru. jika rombel tidak sesuai akan muncul nama dan nisn data kartu siswa yang salah. guru wajib bertanya untuk memperbaiki presensi di halaman presensi & data anak usil
+2. seperti jawaban no D1
+3. tidak
+4. tidak
+5. secara mendasar, sistem hanya butuh nama dan nisn. jadi setelah nama dan nisn siswa masuk ke siste, siswa bisa dibuatkan qr code custome sticker untuk presensi va qr / guru bisa adjust di halaman presensi di akhir scan
+6. hanya perlu ubah rombel dalam database, log akan menangani catatan history sebelum & sesudahnya
+7. ya. qr dari vendor buka hal yang bisa kita kotrol. kita hanya memanfaatkan isi string dalam qr milik vendor yang berisi nama dan nisn siswa pemilik kartu
+8. otomatis update data rangkatan dan rombel tiap pergantian tahun ajaran (rombel & angkatan + 1 (X-TKJ-1 --> XI-TKJ-1 dan kelas X --> XI)), namun tetap gunakan data dari import sebagai acuan jika admin memasukkan data
+9. seperti jawaban no D8
+10. secara tabel adalah per angkatan
+
+E
+1. iya, tapi ga perlu pembatasan ip address
+2. tidak
+3. pilihan dit di halaman presensi
+4. presensi manual
+5. presensi manual
+6. presensi manual
+7. nama & NISN saja
+8. tidak ada enkripsi karena mengikuti dari vendor. sistem kita adalah wrap apa yang sudah ada
+9. ya
+10. ya
+
+F
+1. hanya scan pertama yang diterima
+2. tolak
+3. tidak
+4. terima scan pertama. meski hampir tidak mungkin
+5. ya
+6. tidak jika guru memilih jam pembelajaran 1 + 2. perlu scan lagi kalau beda sesi
+7. ya
+8. belum ada mekanisme khusus, mungkin perlu tabel untuk itu
+9. ya, bisa
+10. mencegah presensi ganda. tidak ada presensi ganda
+
+G
+1. sesuai no G2
+2. ya kecuali duplicate. tidak ada duplicate. juga ada 'sakit' dan 'izin'
+3. tidak masuk / tidak melakukan scan
+4. melakukan scan pada sesi yang ditentukan
+5. melakukan scan melalui sesi piket / presensi terlambat
+6. presensi dengan rombel yang tidak sesuai
+7. tidak ada duplicate
+8. payload qr tidak ditemukan dalam database
+9. ya. namun pemilihan masih manual via edit setelah presensi selesai
+10. ya, piket --> terlambat; rombel / kelas --> hadir, warning, alpha default, jika tidak masuk tanpa keterangan
+
+H
+1. pop up nama siswa dan nisn data siswa sesuai kartu (payload qr), guru catat nama asli siswa pembawa kartu untuk presensi manual edit di akhir & data didwa melanggar SOP presensi
+2. tidak, mencatat via tabel log presensi, bukan tabel presensi. namun tetap menampilkan di halaman presensi di bawah siswa alpha.
+3. ya
+4. ya
+5. nama dan nisn dari kartu yang tidak sesuai rombel (setelah cross check di BE)
+6. hanya nama dan NISN
+7. scan pasued sampai menekan konfirmasi
+8. catatan untuk nama siswa pembawa kartu (nama siswa usil), tanggal kejadian & kelas / rombel tempat terjadinya
+9. sementara tidak ada tindakan via sistem
+10. belum ada kebijakan, secara sistem akan masuk log presensi (tabel)
+
+I
+1. melakukan cross check rombel yang dipilih dengan data siswa dalam rombel
+2. ya, hanya data pemilik kartu, bukan pemegang
+3. ya. karena siswa masih harus presensi
+4. tidak
+5. tidak
+6. belum terdefinisikan, tapi ya. pelanggaran pemalsuan data diri & penggunaan data orang lain
+7. level guru ke atas & custom dengan hak spesifik melihat itu
+8. ya, akan pop up 10 detik ketika wali kelas login akun nya
+9. tidak, sudah ada di log sistem
+10. tidak perlu
+
+J
+1. menghentikan scan sementara jika ada hal mendesak
+2. stop kamera dan mengubah status sesi ke suspended
+3. ya tetap tersimpan
+4. ya, bisa lanjut sesi sama
+5. ada kemungkinan kembali ke halaman presensi. namun akan ada pop up untuk melanjutkan presensi yang belum selesai
+6. untuk menutup sesi presensi
+7. menutup sesi. data masih bisa edit
+8. ya
+9. ya
+10. tidak. akan ditangani saat kembali ke halaman presensi
+
+K
+1. dianggap paused, status sesi suspended
+2. ya
+3. jika memungkinkan, default tidak
+4. presensi manual
+5. presensi manual
+6. presensi manual
+7. harus ada error catch untuk deteksi
+8. ya, scan akan dihentika, sesi dihapus, guru diminta menghubungi admin / setingkat, dan diatasnya
+9. ya, untuk catch kegagalan sistem 
+10. ya, admin dan setingkat / diatasnya
+
+L
+1. recent scan dalam rombel jika guru presensi dalam kelas. recent scan keterlambatan jika piket
+2. ya, status sesuai dengan definisi pada jawaban G2
+3. ya
+4. ya
+5. ya
+6. ya
+7. pilihan: excl, word / docs, pdf, csv
+8. ya
+9. ya
+10, simpan untuk pengembangan
+
+M
+1. sesuai database yang ku kirim, dengan tambahan untuk mengakomodasi kebutuhan.
+2-10. sama seperti jawaban no M1
+
+N
+1. tidak
+2. seperti jawaban H6
+3. tidak
+4. tidak
+5. ya
+6. tidak
+7. 20 menit, kecuali suspended, timer berhenti hingga dilanjutkan
+8. tidak, hanya selevel guru atau lebih tinggi, atau dengan hak custom spesifik
+9. ya
+10 ya
+
+O
+1. user login
+2. memilih halaman pada laman web
+3. memilih metode / mode presensi
+4. ya
+5. ya
+6. ya
+7. payload terdeteksi, terkirim ke BE
+8. payload tidak terdeteksi, tidak terkirim ke BE, data tidak ada di BE
+9. warning
+10. tidak pernah terjadi. antisipasi tidak ada duplikasi
+11. data kirim ke BE, compare nama, NISN, rombel, angkatan, trigger pop up 'Presensi Berhasil!', tampil pada view halaman siswa, tampilan paling atas view adalah status alpha
+12. data kirim ke BE, compare nama, NISN, rombel, angkatan, masuk log_presensi, tampil di bawah siswa alpha pada view halaman presensi
+13. hapu s duplikasi
+14. keluar dari kamera, status sesi == suspended, timer sesi berhenti hingga dilanjutkan, konfirmasi melanjutkan saat guru masuk lagi ke halaman presensi
+15. sesi == selesai, timer sesi == 0, guru kembali ke halaman presensi
+
+P
+1. ya, maksimal 3 jam
+2. ya
+3. dianggap terlambat pada jam 1
+4. notif dan masuk database pada tabel log_presensi
+5. catatan nama murid pembawa kartu, rombel, dan tanggal kejadian
+6. semi-wajib untuk menyelesaikan sesi, tetap menyimpan data per scan
+7. tidak, bisa membuat sesi baru dengan pilihan jam baru, tidak boleh sama
+8. ya, selevel guru ke atas bisa, juga mereka dengan hak akses custom spesifik
+9. tidak, hanya data hasil presensi siswa, pada akun siswa
+10. per jam pembelajaran

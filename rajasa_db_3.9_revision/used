@@ -1,0 +1,66 @@
+1. roles
+add kolom : level_rank
+    siswa   : 10
+    guru    : 30
+
+2. permissions
+Status: dipertahankan.
+Tabel ini cocok untuk akses custom seperti:
+    attendance.read
+    attendance.scan
+    attendance.edit
+    attendance.export
+    attendance.warning.read
+    attendance.warning.resolve
+    attendance.student.view
+
+3. user_roles
+Status: dipertahankan.
+Tetap dibutuhkan untuk menghubungkan akun dengan role.
+
+4. user_permissions
+Status: dipertahankan.
+Ini penting untuk custom access. Misalnya intern tidak perlu menjadi guru/staff, tetapi bisa diberi izin khusus:
+    attendance.scan
+    attendance.read_recent
+
+5. guru_staff
+Status: dipertahankan.
+Tetap cocok untuk menyimpan data guru dan staff.
+
+6. users
+Status: dipertahankan.
+Sudah sesuai karena siswa juga punya akun. Ini cocok dengan kebutuhan bahwa hasil presensi masuk ke akun siswa.
+
+7. jurusan
+Status: dipertahankan.
+Masih dibutuhkan karena rombel memakai jurusan.
+
+8. rombel
+gunakan 'penempatan_siswa_rombel' sebagai sumber tahun ajaran
+
+9. siswa
+ubah:
+jenis_kelamin ENUM('L','P') DEFAULT NULL
+
+stable search:
+    nisn
+    nama_lengkap
+    rombel_id_aktif
+    status
+
+10. penempatan_siswa_rombel
+Status: dipertahankan.
+Ini penting untuk histori rombel siswa. Cocok untuk kasus siswa pindah rombel, naik kelas, dan pergantian tahun ajaran.
+
+11. siswa_mutasi
+Status: dipertahankan.
+Masih berguna untuk siswa pindah masuk, keluar, atau mutasi.
+
+12. rombel_wali_kelas
+Status: dipertahankan.
+Tabel ini perlu dipakai untuk kebutuhan pop-up wali kelas saat ada warning.
+
+13. import_jobs, import_column_mappings, import_row_logs
+Status: dipertahankan, tetapi bisa disederhanakan.
+Kamu butuh import data siswa dan rombel. Jadi tabel ini masih berguna. Namun tidak perlu terlalu kompleks jika belum ada fitur import lanjutan.
